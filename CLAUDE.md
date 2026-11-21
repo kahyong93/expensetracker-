@@ -17,15 +17,15 @@ Read this file at the start of every session. Source-of-truth docs:
 ## 2. Project facts (keep current)
 | Item | Value |
 |---|---|
-| Next.js / Router | TBD (App Router expected; for Pages Router adapt paths, keep the rules) |
-| Language | TBD (TypeScript `strict` expected) |
-| Package manager | TBD (match the lockfile; never mix) |
-| Styling | TBD (use what exists, §5) |
-| Database + ORM | TBD |
-| Auth | TBD |
-| AI provider / SDK | TBD (use the existing one) |
-| Validation / Tests / Lint | TBD |
-| Scripts | dev TBD · build TBD · lint TBD · test TBD · typecheck TBD |
+| Next.js / Router | Next.js 16.4.6, App Router (`app/`), React 19.3. Middleware lives in `proxy.ts` |
+| Language | TypeScript, `strict: true` |
+| Package manager | npm (`package-lock.json`) |
+| Styling | Tailwind CSS v4 (`@tailwindcss/turbopack`, CSS-first config in `app/globals.css`) + shadcn (`components.json`, `@base-ui/react`, cva) |
+| Database + ORM | Neon Postgres (`@neondatabase/serverless`, `drizzle-orm/neon-http`) + Drizzle ORM / drizzle-kit 1.0.0-rc.6. Schema `db/schema.ts`, relations `db/relations.ts`, migrations `drizzle/` |
+| Auth | Clerk (`@clerk/nextjs` v7); `users.id` = Clerk user id |
+| AI provider / SDK | None installed yet. Ask before adding one |
+| Validation / Tests / Lint | Validation: none yet · Tests: none yet (ask before adding) · Lint: ESLint 9 + `eslint-config-next` |
+| Scripts | dev `next dev` · build `next build` · lint `eslint` · test none · typecheck `tsc --noEmit` · db `db:generate` / `db:migrate` / `db:studio` |
 
 ## 3. Architecture
 - **Server Components by default.** Pages load the signed-in user's data on the server and pass serialisable props down.
