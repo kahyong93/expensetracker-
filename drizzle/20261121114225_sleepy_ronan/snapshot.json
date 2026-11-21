@@ -1,0 +1,1603 @@
+{
+  "type": "base",
+  "version": "10",
+  "dialect": "postgres",
+  "id": "e7a1a524-efdb-44b0-9b3b-d3ae792aa6c7",
+  "prevIds": [
+    "00000000-0000-0000-0000-000000000000"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "currency_code"
+      ],
+      "writes": [
+        "s|enum|public.currency_code",
+        "n|enum|public.currency_code",
+        "e|enum|public.currency_code",
+        "n|type|public.currency_code"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "entry_type"
+      ],
+      "writes": [
+        "s|enum|public.entry_type",
+        "n|enum|public.entry_type",
+        "e|enum|public.entry_type",
+        "n|type|public.entry_type"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "insight_kind"
+      ],
+      "writes": [
+        "s|enum|public.insight_kind",
+        "n|enum|public.insight_kind",
+        "e|enum|public.insight_kind",
+        "n|type|public.insight_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "layout_mode"
+      ],
+      "writes": [
+        "s|enum|public.layout_mode",
+        "n|enum|public.layout_mode",
+        "e|enum|public.layout_mode",
+        "n|type|public.layout_mode"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "ai_insights"
+      ],
+      "writes": [
+        "s|tbl|public.ai_insights",
+        "n|tbl|public.ai_insights",
+        "e|tbl|public.ai_insights",
+        "n|rel|public.ai_insights",
+        "n|type|public.ai_insights",
+        "n|rel|public.ai_insights_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.insight_kind"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "budget_lines"
+      ],
+      "writes": [
+        "s|tbl|public.budget_lines",
+        "n|tbl|public.budget_lines",
+        "e|tbl|public.budget_lines",
+        "n|rel|public.budget_lines",
+        "n|type|public.budget_lines",
+        "n|rel|public.budget_lines_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "categories"
+      ],
+      "writes": [
+        "s|tbl|public.categories",
+        "n|tbl|public.categories",
+        "e|tbl|public.categories",
+        "n|rel|public.categories",
+        "n|type|public.categories",
+        "n|rel|public.categories_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.entry_type"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "currency_rates"
+      ],
+      "writes": [
+        "s|tbl|public.currency_rates",
+        "n|tbl|public.currency_rates",
+        "e|tbl|public.currency_rates",
+        "n|rel|public.currency_rates",
+        "n|type|public.currency_rates",
+        "n|rel|public.currency_rates_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.currency_code"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "entries"
+      ],
+      "writes": [
+        "s|tbl|public.entries",
+        "n|tbl|public.entries",
+        "e|tbl|public.entries",
+        "n|rel|public.entries",
+        "n|type|public.entries",
+        "n|rel|public.entries_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "month_plans"
+      ],
+      "writes": [
+        "s|tbl|public.month_plans",
+        "n|tbl|public.month_plans",
+        "e|tbl|public.month_plans",
+        "n|rel|public.month_plans",
+        "n|type|public.month_plans",
+        "n|rel|public.month_plans_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "months"
+      ],
+      "writes": [
+        "s|tbl|public.months",
+        "n|tbl|public.months",
+        "e|tbl|public.months",
+        "n|rel|public.months",
+        "n|type|public.months",
+        "n|rel|public.months_pkey",
+        "n|rel|public.months_user_key_unique"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "users"
+      ],
+      "writes": [
+        "s|tbl|public.users",
+        "n|tbl|public.users",
+        "e|tbl|public.users",
+        "n|rel|public.users",
+        "n|type|public.users",
+        "n|rel|public.users_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.currency_code",
+        "n|enum|public.layout_mode"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "categories",
+        "categories_month_type_name_unique"
+      ],
+      "writes": [
+        "s|idx|public.categories_month_type_name_unique",
+        "n|idx|public.categories_month_type_name_unique",
+        "e|idx|public.categories_month_type_name_unique",
+        "n|rel|public.categories_month_type_name_unique"
+      ],
+      "reads": [
+        "n|tbl|public.categories",
+        "n|sch|public",
+        "n|col|public.categories.month_id",
+        "n|col|public.categories.type"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "categories",
+        "categories_month_type_position_idx"
+      ],
+      "writes": [
+        "s|idx|public.categories_month_type_position_idx",
+        "n|idx|public.categories_month_type_position_idx",
+        "e|idx|public.categories_month_type_position_idx",
+        "n|rel|public.categories_month_type_position_idx"
+      ],
+      "reads": [
+        "n|tbl|public.categories",
+        "n|sch|public",
+        "n|col|public.categories.month_id",
+        "n|col|public.categories.type",
+        "n|col|public.categories.position"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "entries",
+        "entries_category_idx"
+      ],
+      "writes": [
+        "s|idx|public.entries_category_idx",
+        "n|idx|public.entries_category_idx",
+        "e|idx|public.entries_category_idx",
+        "n|rel|public.entries_category_idx"
+      ],
+      "reads": [
+        "n|tbl|public.entries",
+        "n|sch|public",
+        "n|col|public.entries.category_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "months",
+        "months_user_sort_idx"
+      ],
+      "writes": [
+        "s|idx|public.months_user_sort_idx",
+        "n|idx|public.months_user_sort_idx",
+        "e|idx|public.months_user_sort_idx",
+        "n|rel|public.months_user_sort_idx"
+      ],
+      "reads": [
+        "n|tbl|public.months",
+        "n|sch|public",
+        "n|col|public.months.user_id",
+        "n|col|public.months.sort_index"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "ai_insights"
+      ],
+      "writes": [
+        "s|fk|public.ai_insights.ai_insights_month_id_months_id_fkey",
+        "n|fk|public.ai_insights.ai_insights_month_id_months_id_fkey",
+        "e|fk|public.ai_insights.ai_insights_month_id_months_id_fkey",
+        "n|con|public.ai_insights.ai_insights_month_id_months_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.ai_insights",
+        "n|sch|public",
+        "n|tbl|public.months",
+        "n|sch|public",
+        "n|col|public.ai_insights.month_id",
+        "n|col|public.months.id",
+        "e|uniqueness|public.months.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "budget_lines"
+      ],
+      "writes": [
+        "s|fk|public.budget_lines.budget_lines_month_plan_fk",
+        "n|fk|public.budget_lines.budget_lines_month_plan_fk",
+        "e|fk|public.budget_lines.budget_lines_month_plan_fk",
+        "n|con|public.budget_lines.budget_lines_month_plan_fk"
+      ],
+      "reads": [
+        "n|tbl|public.budget_lines",
+        "n|sch|public",
+        "n|tbl|public.month_plans",
+        "n|sch|public",
+        "n|col|public.budget_lines.user_id",
+        "n|col|public.budget_lines.month_key",
+        "n|col|public.month_plans.user_id",
+        "n|col|public.month_plans.month_key",
+        "e|uniqueness|public.month_plans.month_key.user_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "categories"
+      ],
+      "writes": [
+        "s|fk|public.categories.categories_month_id_months_id_fkey",
+        "n|fk|public.categories.categories_month_id_months_id_fkey",
+        "e|fk|public.categories.categories_month_id_months_id_fkey",
+        "n|con|public.categories.categories_month_id_months_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.categories",
+        "n|sch|public",
+        "n|tbl|public.months",
+        "n|sch|public",
+        "n|col|public.categories.month_id",
+        "n|col|public.months.id",
+        "e|uniqueness|public.months.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "currency_rates"
+      ],
+      "writes": [
+        "s|fk|public.currency_rates.currency_rates_user_id_users_id_fkey",
+        "n|fk|public.currency_rates.currency_rates_user_id_users_id_fkey",
+        "e|fk|public.currency_rates.currency_rates_user_id_users_id_fkey",
+        "n|con|public.currency_rates.currency_rates_user_id_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.currency_rates",
+        "n|sch|public",
+        "n|tbl|public.users",
+        "n|sch|public",
+        "n|col|public.currency_rates.user_id",
+        "n|col|public.users.id",
+        "e|uniqueness|public.users.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "entries"
+      ],
+      "writes": [
+        "s|fk|public.entries.entries_category_id_categories_id_fkey",
+        "n|fk|public.entries.entries_category_id_categories_id_fkey",
+        "e|fk|public.entries.entries_category_id_categories_id_fkey",
+        "n|con|public.entries.entries_category_id_categories_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.entries",
+        "n|sch|public",
+        "n|tbl|public.categories",
+        "n|sch|public",
+        "n|col|public.entries.category_id",
+        "n|col|public.categories.id",
+        "e|uniqueness|public.categories.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "month_plans"
+      ],
+      "writes": [
+        "s|fk|public.month_plans.month_plans_user_id_users_id_fkey",
+        "n|fk|public.month_plans.month_plans_user_id_users_id_fkey",
+        "e|fk|public.month_plans.month_plans_user_id_users_id_fkey",
+        "n|con|public.month_plans.month_plans_user_id_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.month_plans",
+        "n|sch|public",
+        "n|tbl|public.users",
+        "n|sch|public",
+        "n|col|public.month_plans.user_id",
+        "n|col|public.users.id",
+        "e|uniqueness|public.users.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "months"
+      ],
+      "writes": [
+        "s|fk|public.months.months_user_id_users_id_fkey",
+        "n|fk|public.months.months_user_id_users_id_fkey",
+        "e|fk|public.months.months_user_id_users_id_fkey",
+        "n|con|public.months.months_user_id_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.months",
+        "n|sch|public",
+        "n|tbl|public.users",
+        "n|sch|public",
+        "n|col|public.months.user_id",
+        "n|col|public.users.id",
+        "e|uniqueness|public.users.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "users"
+      ],
+      "writes": [
+        "s|fk|public.users.users_active_month_id_months_id_fkey",
+        "n|fk|public.users.users_active_month_id_months_id_fkey",
+        "e|fk|public.users.users_active_month_id_months_id_fkey",
+        "n|con|public.users.users_active_month_id_months_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.users",
+        "n|sch|public",
+        "n|tbl|public.months",
+        "n|sch|public",
+        "n|col|public.users.active_month_id",
+        "n|col|public.months.id",
+        "e|uniqueness|public.months.id"
+      ]
+    }
+  ],
+  "ddl": [
+    {
+      "schema": "public",
+      "name": "ai_insights",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "budget_lines",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "categories",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "currency_rates",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "entries",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "month_plans",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "months",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "users",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "currency_code",
+      "values": [
+        "SGD",
+        "USD",
+        "INR",
+        "MYR",
+        "EUR",
+        "GBP"
+      ],
+      "entityType": "enums"
+    },
+    {
+      "schema": "public",
+      "name": "entry_type",
+      "values": [
+        "Out",
+        "In"
+      ],
+      "entityType": "enums"
+    },
+    {
+      "schema": "public",
+      "name": "insight_kind",
+      "values": [
+        "summary",
+        "alerts",
+        "tips"
+      ],
+      "entityType": "enums"
+    },
+    {
+      "schema": "public",
+      "name": "layout_mode",
+      "values": [
+        "auto",
+        "phone",
+        "laptop"
+      ],
+      "entityType": "enums"
+    },
+    {
+      "schema": "public",
+      "table": "ai_insights",
+      "name": "month_id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "ai_insights",
+      "name": "kind",
+      "type": "insight_kind",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "ai_insights",
+      "name": "payload",
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "ai_insights",
+      "name": "generated_at",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "budget_lines",
+      "name": "user_id",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "budget_lines",
+      "name": "month_key",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "budget_lines",
+      "name": "category_name",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "budget_lines",
+      "name": "amount_cents",
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "name": "id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "name": "month_id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "name": "type",
+      "type": "entry_type",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "name": "name",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "name": "position",
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "currency_rates",
+      "name": "user_id",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "currency_rates",
+      "name": "code",
+      "type": "currency_code",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "currency_rates",
+      "name": "rate",
+      "type": "numeric(12,6)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "entries",
+      "name": "id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "entries",
+      "name": "category_id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "entries",
+      "name": "label",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "entries",
+      "name": "amount_cents",
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "entries",
+      "name": "note",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "entries",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "entries",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "month_plans",
+      "name": "user_id",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "month_plans",
+      "name": "month_key",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "month_plans",
+      "name": "expected_income_cents",
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "month_plans",
+      "name": "ai_note",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "month_plans",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "months",
+      "name": "id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "months",
+      "name": "user_id",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "months",
+      "name": "key",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "months",
+      "name": "sort_index",
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "months",
+      "name": "is_sample",
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "months",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "months",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "users",
+      "name": "id",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "users",
+      "name": "currency",
+      "type": "currency_code",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'SGD'",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "users",
+      "name": "layout",
+      "type": "layout_mode",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'auto'",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "users",
+      "name": "show_audit",
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "true",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "users",
+      "name": "compact_cards",
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "users",
+      "name": "auto_categorise",
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "true",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "users",
+      "name": "active_month_id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "users",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "users",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "name": "categories_month_type_name_unique",
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "month_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "type",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "lower(\"name\")",
+          "isExpression": true,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "entityType": "indexes"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "name": "categories_month_type_position_idx",
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "month_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "type",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "position",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "entityType": "indexes"
+    },
+    {
+      "schema": "public",
+      "table": "entries",
+      "name": "entries_category_idx",
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "category_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "entityType": "indexes"
+    },
+    {
+      "schema": "public",
+      "table": "months",
+      "name": "months_user_sort_idx",
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "sort_index",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "entityType": "indexes"
+    },
+    {
+      "schema": "public",
+      "table": "ai_insights",
+      "name": "ai_insights_month_id_months_id_fkey",
+      "nameExplicit": false,
+      "columns": [
+        "month_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "months",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "entityType": "fks"
+    },
+    {
+      "schema": "public",
+      "table": "budget_lines",
+      "name": "budget_lines_month_plan_fk",
+      "nameExplicit": true,
+      "columns": [
+        "user_id",
+        "month_key"
+      ],
+      "schemaTo": "public",
+      "tableTo": "month_plans",
+      "columnsTo": [
+        "user_id",
+        "month_key"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "entityType": "fks"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "name": "categories_month_id_months_id_fkey",
+      "nameExplicit": false,
+      "columns": [
+        "month_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "months",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "entityType": "fks"
+    },
+    {
+      "schema": "public",
+      "table": "currency_rates",
+      "name": "currency_rates_user_id_users_id_fkey",
+      "nameExplicit": false,
+      "columns": [
+        "user_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "users",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "entityType": "fks"
+    },
+    {
+      "schema": "public",
+      "table": "entries",
+      "name": "entries_category_id_categories_id_fkey",
+      "nameExplicit": false,
+      "columns": [
+        "category_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "categories",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "entityType": "fks"
+    },
+    {
+      "schema": "public",
+      "table": "month_plans",
+      "name": "month_plans_user_id_users_id_fkey",
+      "nameExplicit": false,
+      "columns": [
+        "user_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "users",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "entityType": "fks"
+    },
+    {
+      "schema": "public",
+      "table": "months",
+      "name": "months_user_id_users_id_fkey",
+      "nameExplicit": false,
+      "columns": [
+        "user_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "users",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "entityType": "fks"
+    },
+    {
+      "schema": "public",
+      "table": "users",
+      "name": "users_active_month_id_months_id_fkey",
+      "nameExplicit": false,
+      "columns": [
+        "active_month_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "months",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "entityType": "fks"
+    },
+    {
+      "schema": "public",
+      "table": "ai_insights",
+      "name": "ai_insights_pkey",
+      "columns": [
+        "month_id",
+        "kind"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "budget_lines",
+      "name": "budget_lines_pkey",
+      "columns": [
+        "user_id",
+        "month_key",
+        "category_name"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "currency_rates",
+      "name": "currency_rates_pkey",
+      "columns": [
+        "user_id",
+        "code"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "month_plans",
+      "name": "month_plans_pkey",
+      "columns": [
+        "user_id",
+        "month_key"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "name": "categories_pkey",
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "entries",
+      "name": "entries_pkey",
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "months",
+      "name": "months_pkey",
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "users",
+      "name": "users_pkey",
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "months",
+      "name": "months_user_key_unique",
+      "nameExplicit": true,
+      "columns": [
+        "user_id",
+        "key"
+      ],
+      "nullsNotDistinct": false,
+      "entityType": "uniques"
+    },
+    {
+      "schema": "public",
+      "table": "budget_lines",
+      "name": "budget_lines_amount_non_negative",
+      "value": "\"amount_cents\" >= 0",
+      "entityType": "checks"
+    },
+    {
+      "schema": "public",
+      "table": "categories",
+      "name": "categories_name_not_blank",
+      "value": "length(trim(\"name\")) > 0",
+      "entityType": "checks"
+    },
+    {
+      "schema": "public",
+      "table": "currency_rates",
+      "name": "currency_rates_rate_positive",
+      "value": "\"rate\" > 0",
+      "entityType": "checks"
+    },
+    {
+      "schema": "public",
+      "table": "currency_rates",
+      "name": "currency_rates_not_base",
+      "value": "\"code\" <> 'SGD'",
+      "entityType": "checks"
+    },
+    {
+      "schema": "public",
+      "table": "entries",
+      "name": "entries_amount_non_negative",
+      "value": "\"amount_cents\" >= 0",
+      "entityType": "checks"
+    },
+    {
+      "schema": "public",
+      "table": "entries",
+      "name": "entries_label_not_blank",
+      "value": "length(trim(\"label\")) > 0",
+      "entityType": "checks"
+    },
+    {
+      "schema": "public",
+      "table": "month_plans",
+      "name": "month_plans_expected_income_non_negative",
+      "value": "\"expected_income_cents\" IS NULL OR \"expected_income_cents\" >= 0",
+      "entityType": "checks"
+    },
+    {
+      "schema": "public",
+      "table": "months",
+      "name": "months_key_not_blank",
+      "value": "length(trim(\"key\")) > 0",
+      "entityType": "checks"
+    }
+  ]
+}

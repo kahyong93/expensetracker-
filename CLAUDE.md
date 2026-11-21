@@ -70,18 +70,25 @@ lib/ai/{client,prompts,parse}.ts  lib/db/*  lib/seed/jan25.ts  server/actions/*
 7. After UI work, compare at **390px, 800px and 1280px** against `docs/reference/Cashflow Tracker v2.dc.html`.
 
 ## 6. Data
-Entities (adapt to the ORM's conventions):
+Normalized (3NF) schema in `db/schema.ts`, relations in `db/relations.ts`:
 ```
-UserSettings   userId · currency · layout · showAudit · compactCards · autoCategorise · activeMonth
-CurrencyRate   userId · code · rate                      unique(userId, code)
-Month          id · userId · key · sortIndex(yyyymm) · isSample        unique(userId, key)
-Category       id · monthId · type · name · position                    unique(monthId, type, name)
-Entry          id · monthId · categoryId · type · label · amountCents · note · timestamps
-Budget         userId · monthKey · categoryName · amountCents   unique(userId, monthKey, categoryName)
-ExpectedIncome userId · monthKey · amountCents                  unique(userId, monthKey)
-AiInsight      userId · monthId · kind(summary|alerts|tips) · json      unique(monthId, kind)
-BudgetNote     userId · monthKey · text
+users          id(Clerk userId) · currency · layout · showAudit · compactCards · autoCategorise · activeMonthId→months(set null)
+currency_rates userId→users · code · rate                       PK(userId, code)   overrides only, never SGD
+months         id · userId→users · key · sortIndex(yyyymm) · isSample          unique(userId, key)
+categories     id · monthId→months · type(Out|In) · name · position             unique(monthId, type, lower(name))
+entries        id · categoryId→categories · label · amountCents · note · timestamps
+month_plans    userId→users · monthKey · expectedIncomeCents · aiNote          PK(userId, monthKey)
+budget_lines   (userId, monthKey)→month_plans · categoryName · amountCents     PK(userId, monthKey, categoryName)
+ai_insights    monthId→months · kind(summary|alerts|tips) · payload(jsonb)     PK(monthId, kind)
 ```
+All FKs cascade on delete, except `users.activeMonthId` (set null).
+
+Normalization rules:
+- An entry's **month and type come from its category**. Entries don't store them. Moving an entry means changing `categoryId`, and the target category must be in the same month.
+- **Ownership:** `months`, `currency_rates` and `month_plans` have `userId`. For categories, entries and insights, scope by joining up to `months.userId`.
+- Expected income and the AI budget note live on `month_plans`. Budgets are its `budget_lines`, keyed by month key and category name so they can exist before the month (PRD P8).
+- Delete an empty category only (B11) with a single guarded statement (`… AND NOT EXISTS (SELECT 1 FROM entries …)`). `neon-http` has no interactive transactions, so use single statements or `db.batch`.
+- Schema changes: edit `db/schema.ts`, then run `npm run db:generate`, review the SQL, and `npm run db:migrate` (on a Neon dev branch first).
 Money rules:
 - Store **integer cents in SGD**. Never store floats or converted values.
 - Convert only at the edges: display `cents/100*rate`, input `round(value/rate*100)`.
