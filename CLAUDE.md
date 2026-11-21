@@ -21,11 +21,11 @@ Read this file at the start of every session. Source-of-truth docs:
 | Language | TypeScript, `strict: true` |
 | Package manager | npm (`package-lock.json`) |
 | Styling | Tailwind CSS v4 (`@tailwindcss/turbopack`, CSS-first config in `app/globals.css`) + shadcn (`components.json`, `@base-ui/react`, cva) |
-| Database + ORM | Neon Postgres (`@neondatabase/serverless`, `drizzle-orm/neon-http`) + Drizzle ORM / drizzle-kit 1.0.0-rc.6. Schema `db/schema.ts`, relations `db/relations.ts`, migrations `drizzle/` |
+| Database + ORM | Neon Postgres (`@neondatabase/serverless`, `drizzle-orm/neon-http`) + Drizzle ORM / drizzle-kit 1.0.0-rc.6. Schema `db/schema.ts`, relations `db/relations.ts`. Schema is applied with `drizzle-kit push` (no migration files) |
 | Auth | Clerk (`@clerk/nextjs` v7); `users.id` = Clerk user id |
 | AI provider / SDK | None installed yet. Ask before adding one |
 | Validation / Tests / Lint | Validation: none yet · Tests: none yet (ask before adding) · Lint: ESLint 9 + `eslint-config-next` |
-| Scripts | dev `next dev` · build `next build` · lint `eslint` · test none · typecheck `tsc --noEmit` · db `db:generate` / `db:migrate` / `db:studio` |
+| Scripts | dev `next dev` · build `next build` · lint `eslint` · test none · typecheck `tsc --noEmit` · db `db:push` / `db:studio` |
 
 ## 3. Architecture
 - **Server Components by default.** Pages load the signed-in user's data on the server and pass serialisable props down.
@@ -88,7 +88,8 @@ Normalization rules:
 - **Ownership:** `months`, `currency_rates` and `month_plans` have `userId`. For categories, entries and insights, scope by joining up to `months.userId`.
 - Expected income and the AI budget note live on `month_plans`. Budgets are its `budget_lines`, keyed by month key and category name so they can exist before the month (PRD P8).
 - Delete an empty category only (B11) with a single guarded statement (`… AND NOT EXISTS (SELECT 1 FROM entries …)`). `neon-http` has no interactive transactions, so use single statements or `db.batch`.
-- Schema changes: edit `db/schema.ts`, then run `npm run db:generate`, review the SQL, and `npm run db:migrate` (on a Neon dev branch first).
+- Schema changes: edit `db/schema.ts`, then run `npm run db:push`. It applies the difference straight to the database and has no migration history, so never mix it with `drizzle-kit migrate`. Try risky changes on a Neon dev branch first (`neon branches create`), and read push's prompts before accepting anything that drops data.
+
 Money rules:
 - Store **integer cents in SGD**. Never store floats or converted values.
 - Convert only at the edges: display `cents/100*rate`, input `round(value/rate*100)`.
