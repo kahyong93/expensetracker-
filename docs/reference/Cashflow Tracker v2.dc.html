@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#FFF5F7;color:#3B2F3A;font-family:'Nunito',sans-serif}a{color:#C9446F}a:hover{color:#A8335A}*:focus-visible{outline:2px solid #C9446F;outline-offset:2px}nav::-webkit-scrollbar{display:none}@media (max-width:719px){input,select,textarea{font-size:16px!important}}</style>
+</helmet>
+<div style="max-width:{{ frameW }};margin:0 auto;box-shadow:{{ frameShadow }};min-height:100vh;display:flex;flex-direction:column;font-variant-numeric:tabular-nums;background-color:#FFF5F7;background-image:radial-gradient(#FAD2DE 1.3px, transparent 1.4px);background-size:24px 24px">
+
+  <header style="position:sticky;top:0;z-index:30;background:rgba(255,245,247,0.92);backdrop-filter:blur(8px);border-bottom:2px solid #FCE1E9">
+    <div style="max-width:1240px;margin:0 auto;padding:14px 24px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:48px;height:48px;border-radius:18px;background:#FFD6E2;display:grid;place-items:center;box-shadow:0 4px 0 #F8B9CC;transform:rotate(-6deg)"><svg width="38" height="38" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#FFFFFF"></circle><circle cx="14" cy="18" r="2.2" fill="#3B2F3A"></circle><circle cx="26" cy="18" r="2.2" fill="#3B2F3A"></circle><path d="M15 24c1.5 2 3 3 5 3s3.5-1 5-3" stroke="#3B2F3A" stroke-width="2" fill="none" stroke-linecap="round"></path><circle cx="10.5" cy="23.5" r="2.6" fill="#F9A8C0"></circle><circle cx="29.5" cy="23.5" r="2.6" fill="#F9A8C0"></circle></svg></div>
+        <div style="display:flex;flex-direction:column">
+          <span style="font-family:'Fredoka',sans-serif;font-weight:600;font-size:22px;line-height:1.1;color:#C9446F">Personal Cashflow Tracker</span>
+          <sc-if value="{{ notMobile }}" hint-placeholder-val="{{ true }}"><span style="font-size:12px;color:#8A7A86">Money in, money out, and next month's plan</span></sc-if>
+        </div>
+      </div>
+      <nav style="display:{{ navDisp }};grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;padding:4px;background:#FBEAF0;border-radius:999px;flex-wrap:{{ navWrap }};overflow-x:auto;scrollbar-width:none;max-width:100%;box-sizing:border-box;order:{{ navOrder }};width:{{ navW }}">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+          <button onClick="{{ t.onClick }}" style="border:0;cursor:pointer;font:inherit;font-weight:800;font-size:13px;padding:{{ tabPad }};border-radius:999px;display:flex;align-items:center;justify-content:center;gap:6px;flex:none;white-space:nowrap;min-width:0;background:{{ t.bg }};color:{{ t.fg }};box-shadow:{{ t.shadow }}">{{ t.text }}<sc-if value="{{ t.showBadge }}"><span style="font-size:11px;padding:1px 7px;border-radius:999px;background:#FFFFFF;color:#8A7A86">{{ t.badge }}</span></sc-if></button>
+        </sc-for>
+      </nav>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+        <div role="group" aria-label="Layout" style="display:flex;gap:2px;padding:3px;background:#FBEAF0;border-radius:999px">
+          <button onClick="{{ setPhone }}" title="Phone layout" style="border:0;cursor:pointer;font:inherit;font-weight:800;font-size:12px;padding:6px 10px;border-radius:999px;display:flex;align-items:center;gap:5px;background:{{ phoneBg }};color:{{ phoneFg }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="3"></rect><path d="M11 18h2"></path></svg><sc-if value="{{ notMobile }}" hint-placeholder-val="{{ true }}">Phone</sc-if></button>
+          <button onClick="{{ setLaptop }}" title="Laptop layout" style="border:0;cursor:pointer;font:inherit;font-weight:800;font-size:12px;padding:6px 10px;border-radius:999px;display:flex;align-items:center;gap:5px;background:{{ laptopBg }};color:{{ laptopFg }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="11" rx="2"></rect><path d="M2 19h20"></path></svg><sc-if value="{{ notMobile }}" hint-placeholder-val="{{ true }}">Laptop</sc-if></button>
+        </div>
+        <select aria-label="Month" value="{{ active }}" onChange="{{ setMonth }}" style="font:inherit;font-weight:800;font-size:13px;padding:8px 10px;border:1.5px solid #F8CFDC;border-radius:999px;background:#FFFFFF;color:#3B2F3A;cursor:pointer">
+          <sc-for list="{{ monthOpts }}" as="m"><option value="{{ m }}">{{ m }}</option></sc-for>
+        </select>
+        <button onClick="{{ openMonth }}" style="font:inherit;font-weight:700;font-size:13px;padding:8px 12px;border:1.5px solid #F8CFDC;border-radius:999px;background:#FFFFFF;color:#3B2F3A;cursor:pointer" style-hover="background:#FFF0E6">+ Month</button>
+        <select aria-label="Currency" value="{{ cur }}" onChange="{{ setCur }}" style="font:inherit;font-weight:800;font-size:13px;padding:8px 10px;border:1.5px solid #F8CFDC;border-radius:999px;background:#FFFFFF;color:#3B2F3A;cursor:pointer">
+          <sc-for list="{{ curOpts }}" as="c"><option value="{{ c.code }}">{{ c.label }}</option></sc-for>
+        </select>
+        <sc-if value="{{ showRate }}">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#8A7A86">S$1 =<input type="number" step="0.0001" value="{{ rateStr }}" onChange="{{ setRate }}" style="width:70px;font:inherit;font-size:13px;font-weight:700;padding:7px 8px;border:1.5px solid #F8CFDC;border-radius:10px;background:#FFFFFF;color:#3B2F3A">{{ sym }}</label>
+        </sc-if>
+        <sc-if value="{{ notMobile }}" hint-placeholder-val="{{ true }}"><button onClick="{{ openAdd }}" style="font:inherit;font-weight:800;font-size:13px;padding:9px 16px;border:0;border-radius:999px;background:#C9446F;color:#FFFFFF;cursor:pointer;box-shadow:0 4px 0 #A8335A" style-hover="background:#B83C64;transform:translateY(-1px)">+ Add item</button></sc-if>
+      </div>
+    </div>
+  </header>
+
+  <main style="flex:1;width:100%;max-width:1240px;margin:0 auto;padding:{{ mainPad }};box-sizing:border-box;display:flex;flex-direction:column;gap:20px">
+
+    <sc-if value="{{ notMobile }}" hint-placeholder-val="{{ true }}"><section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px">
+<div style="position:relative;overflow:hidden;background:#DDF5EA;border:2px solid #BCEAD4;border-radius:30px;padding:22px;display:flex;flex-direction:column;gap:8px;box-shadow:0 6px 0 #BCEAD4"><span style="position:absolute;right:-34px;bottom:-46px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,0.45)"></span><div style="position:relative;display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:800;color:#23795D;background:#FFFFFF;padding:4px 12px;border-radius:999px">Earned</span><svg width="38" height="38" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#FFFFFF"></circle><circle cx="14" cy="18" r="2.2" fill="#3B2F3A"></circle><circle cx="26" cy="18" r="2.2" fill="#3B2F3A"></circle><path d="M15 24c1.5 2 3 3 5 3s3.5-1 5-3" stroke="#3B2F3A" stroke-width="2" fill="none" stroke-linecap="round"></path><circle cx="10.5" cy="23.5" r="2.6" fill="#9FE0C3"></circle><circle cx="29.5" cy="23.5" r="2.6" fill="#9FE0C3"></circle></svg></div><span style="position:relative;font-family:'Fredoka',sans-serif;font-weight:600;font-size:36px;line-height:1.1;color:#1E6E54">{{ kIn }}</span><span style="position:relative;font-size:12px;font-weight:700;color:#3F7F69">{{ kInSub }}</span></div>
+<div style="position:relative;overflow:hidden;background:#FFE6DA;border:2px solid #FFCDB8;border-radius:30px;padding:22px;display:flex;flex-direction:column;gap:8px;box-shadow:0 6px 0 #FFCDB8"><span style="position:absolute;right:-34px;bottom:-46px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,0.45)"></span><div style="position:relative;display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:800;color:#B4532A;background:#FFFFFF;padding:4px 12px;border-radius:999px">Spent</span><svg width="38" height="38" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#FFFFFF"></circle><circle cx="14" cy="18" r="2.2" fill="#3B2F3A"></circle><circle cx="26" cy="18" r="2.2" fill="#3B2F3A"></circle><path d="M15 24c1.5 2 3 3 5 3s3.5-1 5-3" stroke="#3B2F3A" stroke-width="2" fill="none" stroke-linecap="round"></path><circle cx="10.5" cy="23.5" r="2.6" fill="#FFB59A"></circle><circle cx="29.5" cy="23.5" r="2.6" fill="#FFB59A"></circle></svg></div><span style="position:relative;font-family:'Fredoka',sans-serif;font-weight:600;font-size:36px;line-height:1.1;color:#A44A24">{{ kOut }}</span><span style="position:relative;font-size:12px;font-weight:700;color:#9A5A3E">{{ kOutSub }}</span></div>
+<div style="position:relative;overflow:hidden;background:#FFF2C4;border:2px solid #F7DE8C;border-radius:30px;padding:22px;display:flex;flex-direction:column;gap:8px;box-shadow:0 6px 0 #F7DE8C"><span style="position:absolute;right:-34px;bottom:-46px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,0.45)"></span><div style="position:relative;display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-size:12px;font-weight:800;color:#7A5A12;background:#FFFFFF;padding:4px 12px;border-radius:999px">{{ kBalTag }}</span><span style="font-size:15px;font-weight:800;color:#7A5A12;white-space:nowrap">{{ kMood }}</span></div><span style="position:relative;font-family:'Fredoka',sans-serif;font-weight:600;font-size:36px;line-height:1.1;color:#3B2F3A">{{ kBal }}</span><div style="position:relative;display:flex;align-items:center;gap:8px"><div style="flex:1;height:10px;border-radius:999px;background:#FFFFFF;overflow:hidden"><div style="height:100%;border-radius:999px;width:{{ kBarW }};background:{{ kBarC }}"></div></div><span style="font-size:12px;font-weight:800;color:#7A5A12">{{ kRate }}</span></div></div>
+    </section></sc-if>
+    <sc-if value="{{ mobile }}">
+      <section style="background:#FFFFFF;border:2px solid #FCE1E9;border-radius:26px;padding:12px;display:flex;flex-direction:column;gap:10px;box-shadow:0 4px 0 #FCE1E9">
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px"><div style="display:flex;flex-direction:column;gap:4px;min-width:0;padding:10px;border-radius:18px;background:#DDF5EA"><span style="font-size:11px;font-weight:800;color:#1E6E54">Earned</span><span style="font-family:'Fredoka',sans-serif;font-weight:600;font-size:17px;line-height:1.1;color:#1E6E54;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ kIn }}</span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0;padding:10px;border-radius:18px;background:#FFE6DA"><span style="font-size:11px;font-weight:800;color:#A44A24">Spent</span><span style="font-family:'Fredoka',sans-serif;font-weight:600;font-size:17px;line-height:1.1;color:#A44A24;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ kOut }}</span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0;padding:10px;border-radius:18px;background:#FFF2C4"><span style="font-size:11px;font-weight:800;color:#3B2F3A">Left</span><span style="font-family:'Fredoka',sans-serif;font-weight:600;font-size:17px;line-height:1.1;color:#3B2F3A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ kBal }}</span></div></div>
+        <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:8px;border-radius:999px;background:#FBEAF0;overflow:hidden"><div style="height:100%;border-radius:999px;width:{{ kBarW }};background:{{ kBarC }}"></div></div><span style="font-size:12px;font-weight:800;color:#7A5A12;white-space:nowrap">{{ kRate }} {{ kMood }}</span></div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ isDash }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:20px;align-items:start">
+          <div style="background:#FFFFFF;border:2px solid #FCE1E9;border-radius:30px;padding:22px;display:flex;flex-direction:column;gap:16px;box-shadow:0 6px 0 #FCE1E9, 0 16px 32px rgba(233,120,160,0.10)">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-family:'Fredoka',sans-serif;font-weight:600;font-size:21px;display:flex;align-items:center;gap:6px"><span style="color:#F59AB5">✦</span>Where it went</span>
+              <button onClick="{{ goOut }}" style="font:inherit;font-weight:800;font-size:12px;padding:6px 12px;border:0;border-radius:999px;background:#FDEDE4;color:#B4532A;cursor:pointer" style-hover="background:#FBDCCB">Expenses board →</button>
+            </div>
+            <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+              <sc-if value="{{ notMobile }}" hint-placeholder-val="{{ true }}"><div style="width:156px;height:156px;border-radius:50%;flex:none;display:grid;place-items:center;background:{{ donutBg }}">
+                <div style="width:104px;height:104px;border-radius:50%;background:#FFFFFF;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                  <span style="font-size:11px;font-weight:800;color:#8A7A86">Total out</span>
+                  <span style="font-family:'Fredoka',sans-serif;font-weight:600;font-size:16px">{{ kOut }}</span>
+                </div>
+              </div></sc-if>
+              <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:6px">
+                <sc-for list="{{ dashOut }}" as="c" hint-placeholder-count="4">
+                  <button onClick="{{ c.onClick }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-radius:14px" style-hover="background:#FFF5F7">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px">
+                      <span style="display:flex;align-items:center;gap:8px;min-width:0;flex:1"><span style="width:10px;height:10px;border-radius:50%;flex:none;background:{{ c.color }}"></span><span style="font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">{{ c.name }}</span><span style="color:#8A7A86;flex:none">({{ c.count }})</span></span>
+                      <span style="display:flex;align-items:center;gap:8px;flex:none"><span style="font-weight:800;white-space:nowrap">{{ c.total }}</span><sc-if value="{{ notMobile }}" hint-placeholder-val="{{ true }}"><span style="font-size:11px;font-weight:800;padding:1px 7px;border-radius:999px;background:{{ c.tint }}">{{ c.pct }}</span></sc-if></span>
+                    </div>
+                    <div style="height:7px;border-radius:999px;background:#FBEAF0;overflow:hidden"><div style="height:100%;border-radius:999px;width:{{ c.w }};background:{{ c.barColor }}"></div></div>
+                    <sc-if value="{{ c.hasBudget }}"><span style="font-size:11px;font-weight:700;color:{{ c.budgetFg }}">{{ c.budgetLine }}</span></sc-if>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:#FFFFFF;border:2px solid #FCE1E9;border-radius:30px;padding:22px;display:flex;flex-direction:column;gap:14px;box-shadow:0 6px 0 #FCE1E9, 0 16px 32px rgba(233,120,160,0.10)">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-family:'Fredoka',sans-serif;font-weight:600;font-size:21px;display:flex;align-items:center;gap:6px"><span style="color:#F59AB5">✦</span>What came in</span>
+              <button onClick="{{ goIn }}" style="font:inherit;font-weight:800;font-size:12px;padding:6px 12px;border:0;border-radius:999px;background:#E3F6EE;color:#23795D;cursor:pointer" style-hover="background:#CDEFE0">Income board →</button>
+            </div>
+            <sc-for list="{{ dashIn }}" as="c" hint-placeholder-count="3">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;justify-content:space-between;font-size:13px;gap:8px"><span><span style="font-weight:800">{{ c.name }}</span> <span style="color:#8A7A86">({{ c.count }})</span></span><span><span style="font-weight:800;color:#23795D">{{ c.total }}</span> <span style="color:#8A7A86;font-size:12px">{{ c.pct }}</span></span></div>
+                <div style="height:7px;border-radius:999px;background:#E3F6EE;overflow:hidden"><div style="height:100%;border-radius:999px;width:{{ c.w }};background:#3FAE8A"></div></div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ notMobile }}" hint-placeholder-val="{{ true }}"><div style="display:flex;flex-direction:column;gap:2px;padding-top:10px;border-top:1.5px dashed #FCE1E9">
+              <span style="font-size:11px;font-weight:800;color:#8A7A86;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">All income lines</span>
+              <sc-for list="{{ inLines }}" as="l" hint-placeholder-count="7">
+                <div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:4px 0"><span style="display:flex;gap:8px;align-items:center"><span style="font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#FBEAF0;color:#6E5E6A">{{ l.cat }}</span>{{ l.label }}</span><span style="font-weight:800">{{ l.amt }}</span></div>
+              </sc-for>
+            </div></sc-if>
+          </div>
+        </section>
+
+        <section style="background:#FFFFFF;border:2px solid #FCE1E9;border-radius:30px;padding:22px;display:flex;flex-direction:column;gap:14px;box-shadow:0 6px 0 #FCE1E9, 0 16px 32px rgba(233,120,160,0.10)">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-family:'Fredoka',sans-serif;font-weight:600;font-size:21px;display:flex;align-items:center;gap:6px"><span style="color:#F59AB5">✦</span>Top spending</span>
+            <div style="display:flex;gap:4px;padding:3px;background:#FBEAF0;border-radius:999px">
+              <button onClick="{{ showMerch }}" style="border:0;cursor:pointer;font:inherit;font-weight:800;font-size:12px;padding:6px 12px;border-radius:999px;background:{{ merchBg }};color:#3B2F3A">Merchants</button>
+              <button onClick="{{ showBig }}" style="border:0;cursor:pointer;font:inherit;font-weight:800;font-size:12px;padding:6px 12px;border-radius:999px;background:{{ bigBg }};color:#3B2F3A">Biggest 10</button>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));column-gap:28px;row-gap:4px">
+            <sc-for list="{{ topList }}" as="m" hint-placeholder-count="8">
+              <div style="display:flex;flex-direction:column;gap:5px;padding:6px 0">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px">
+                  <span style="display:flex;align-items:center;gap:8px;min-width:0"><span style="width:22px;height:22px;border-radius:8px;background:#FBEAF0;font-size:11px;font-weight:800;display:grid;place-items:center;flex:none">{{ m.rank }}</span><span style="font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ m.label }}</span><span style="color:#8A7A86;font-size:12px;white-space:nowrap">{{ m.meta }}</span></span>
+                  <span style="font-weight:800;white-space:nowrap">{{ m.amt }}</span>
+                </div>
+                <div style="height:5px;border-radius:999px;background:#FBEAF0;overflow:hidden"><div style="height:100%;border-radius:999px;width:{{ m.w }};background:#F59AB5"></div></div>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+
+        <sc-if value="{{ showAudit }}">
+          <section style="background:#FFFFFF;border:2px solid #FCE1E9;border-radius:30px;overflow:hidden">
+            <button onClick="{{ toggleAudit }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:100%;padding:14px 22px;display:flex;justify-content:space-between;align-items:center;gap:8px" style-hover="background:#FFF8FA">
+              <span style="display:flex;align-items:center;gap:10px"><span style="width:24px;height:24px;border-radius:8px;background:#FFF1C9;color:#7A5A12;font-weight:800;font-size:13px;display:grid;place-items:center">!</span><span style="font-weight:800;font-size:14px">Jan-25 sheet formula check</span></span>
+              <span style="font-size:12px;font-weight:800;color:#C9446F">{{ auditLabel }}</span>
+            </button>
+            <sc-if value="{{ auditOpen }}">
+              <div style="padding:4px 22px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;font-size:13px;line-height:1.5">
+                <div style="background:#FFF8FA;border:1.5px solid #FCE1E9;border-radius:14px;padding:14px"><div style="font-weight:800;margin-bottom:4px">Food total</div>All Food rows add up to <b>{{ aFoodLive }}</b>. The sheet's total cell shows <b>{{ aFoodSheet }}</b>, a difference of {{ aFoodDiff }} from rows left out of the range.</div>
+                <div style="background:#FFF8FA;border:1.5px solid #FCE1E9;border-radius:14px;padding:14px"><div style="font-weight:800;margin-bottom:4px">Interest total</div>All 5 Interest rows add up to <b>{{ aIntLive }}</b>. The sheet's total cell shows <b>{{ aIntSheet }}</b>.</div>
+              </div>
+            </sc-if>
+          </section>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isBoard }}">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <section style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px">
+          <span style="font-size:13px;font-weight:800;padding:6px 14px;border-radius:999px;background:{{ boardPillBg }};color:{{ boardPillFg }}">{{ boardTitle }}</span>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;flex:1 1 280px;justify-content:flex-end">
+            <input placeholder="Search items, e.g. Uniqlo" value="{{ search }}" onChange="{{ setSearch }}" style="flex:1 1 180px;max-width:260px;min-width:0;font:inherit;font-size:13px;padding:8px 12px;border:1.5px solid #F8CFDC;border-radius:12px;background:#FFFFFF;color:#3B2F3A">
+            <button onClick="{{ openNewCat }}" style="font:inherit;font-weight:700;font-size:13px;padding:8px 12px;border:1.5px solid #F8CFDC;border-radius:999px;background:#FFFFFF;color:#3B2F3A;cursor:pointer" style-hover="background:#FFF0E6">+ Category</button>
+          </div>
+        </section>
+        <section style="background:#FFFFFF;border:1.5px solid #FCE1E9;border-radius:26px;padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+          <div style="height:12px;border-radius:999px;overflow:hidden;display:flex;gap:2px;background:#FBEAF0">
+            <sc-for list="{{ cols }}" as="c" hint-placeholder-count="4"><div style="height:100%;width:{{ c.w }};background:{{ c.color }}"></div></sc-for>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:12px">
+            <sc-for list="{{ cols }}" as="c" hint-placeholder-count="4"><span style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:{{ c.color }}"></span>{{ c.name }} <b>{{ c.pct }}</b></span></sc-for>
+          </div>
+        </section>
+        <section style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;align-items:start">
+          <sc-for list="{{ cols }}" as="c" hint-placeholder-count="4">
+            <div onDragOver="{{ c.onDragOver }}" onDragLeave="{{ c.onDragLeave }}" onDrop="{{ c.onDrop }}" style="background:#FFFFFF;border-radius:28px;overflow:hidden;display:flex;flex-direction:column;border:2px solid {{ c.border }};box-shadow:{{ c.glow }}">
+              <div style="padding:14px;display:flex;flex-direction:column;gap:8px;background:{{ c.tint }}">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
+                  <span style="display:flex;align-items:center;gap:8px;min-width:0"><span style="width:10px;height:10px;border-radius:50%;flex:none;background:{{ c.color }}"></span><span style="font-family:'Fredoka',sans-serif;font-weight:600;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name }}</span><span style="font-size:11px;font-weight:800;padding:1px 7px;border-radius:999px;background:#FFFFFF;color:#8A7A86">{{ c.count }}</span></span>
+                  <span style="display:flex;gap:2px">
+                    <button onClick="{{ c.onRename }}" title="Rename" style="border:0;background:transparent;cursor:pointer;padding:4px;border-radius:8px;color:#8A7A86" style-hover="background:#FFFFFF"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg></button>
+                    <button onClick="{{ c.onDelete }}" title="Delete empty category" style="border:0;background:transparent;cursor:pointer;padding:4px;border-radius:8px;color:#8A7A86" style-hover="background:#FFFFFF"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+                  </span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px">
+                  <span style="font-family:'Fredoka',sans-serif;font-weight:600;font-size:22px">{{ c.total }}</span>
+                  <span style="font-size:12px;font-weight:800;padding:2px 8px;border-radius:999px;background:#FFFFFF">{{ c.pct }}</span>
+                </div>
+                <sc-if value="{{ c.hasBudget }}">
+                  <div style="display:flex;flex-direction:column;gap:4px">
+                    <div style="height:6px;border-radius:999px;background:#FFFFFF;overflow:hidden"><div style="height:100%;border-radius:999px;width:{{ c.budgetW }};background:{{ c.budgetBar }}"></div></div>
+                    <span style="font-size:11px;font-weight:700;color:{{ c.budgetFg }}">{{ c.budgetLine }}</span>
+                  </div>
+                </sc-if>
+              </div>
+              <sc-if value="{{ c.showItems }}" hint-placeholder-val="{{ true }}"><div style="padding:10px;display:flex;flex-direction:column;gap:8px;max-height:{{ c.maxH }};overflow-y:auto;min-height:110px">
+                <sc-for list="{{ c.items }}" as="it" hint-placeholder-count="3">
+                  <div draggable="true" onDragStart="{{ it.onDragStart }}" onDragEnd="{{ it.onDragEnd }}" style="cursor:grab;background:#FFFAFB;border:1.5px solid #FCE1E9;border-radius:20px;padding:11px 14px;display:flex;flex-direction:column;gap:8px" style-hover="border-color:#F59AB5;background:#FFFFFF">
+                    <div style="display:flex;justify-content:space-between;gap:8px">
+                      <div style="display:flex;flex-direction:column;min-width:0">
+                        <span style="font-size:13px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ it.label }}</span>
+                        <sc-if value="{{ it.hasNote }}"><span style="font-size:11px;color:#8A7A86">{{ it.note }}</span></sc-if>
+                      </div>
+                      <span style="font-size:13px;font-weight:800;white-space:nowrap">{{ it.amt }}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
+                      <select value="" onChange="{{ it.onMove }}" aria-label="Move to category" style="font:inherit;font-size:11px;padding:3px 6px;border:1.5px solid #FCE1E9;border-radius:8px;background:#FFFFFF;color:#6E5E6A;cursor:pointer;max-width:120px">
+                        <option value="" disabled="{{ true }}">Move to…</option>
+                        <sc-for list="{{ it.moveOpts }}" as="o"><option value="{{ o }}">{{ o }}</option></sc-for>
+                      </select>
+                      <span style="display:flex;gap:2px">
+                        <button onClick="{{ it.onEdit }}" style="border:0;background:transparent;cursor:pointer;font:inherit;font-size:11px;font-weight:800;color:#C9446F;padding:3px 7px;border-radius:8px" style-hover="background:#FDE6EE">Edit</button>
+                        <button onClick="{{ it.onDel }}" style="border:0;background:transparent;cursor:pointer;font:inherit;font-size:11px;font-weight:800;color:#8A7A86;padding:3px 7px;border-radius:8px" style-hover="background:#FBEAF0">Delete</button>
+                      </span>
+                    </div>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ c.empty }}">
+                  <div style="height:88px;border:2px dashed #FCE1E9;border-radius:14px;display:grid;place-items:center;font-size:12px;color:#8A7A86">Drop items here</div>
+                </sc-if>
+              </div>
+              <button onClick="{{ c.onAdd }}" style="border:0;border-top:1.5px solid #FBEAF0;background:#FFFFFF;cursor:pointer;font:inherit;font-size:12px;font-weight:800;color:#6E5E6A;padding:10px" style-hover="background:#FFF5F7">+ Add to {{ c.name }}</button></sc-if>
+              <sc-if value="{{ c.showToggle }}"><button onClick="{{ c.onToggleOpen }}" style="border:0;border-top:1.5px solid #FBEAF0;background:#FFFFFF;cursor:pointer;font:inherit;font-size:12px;font-weight:800;color:#C9446F;padding:11px">{{ c.toggleLabel }}</button></sc-if>
+            </div>
+          </sc-for>
+        </section>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isPlan }}">
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <section style="background:#FFFFFF;border:2px solid #FCE1E9;border-radius:30px;padding:22px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:20px;box-shadow:0 6px 0 #FCE1E9, 0 16px 32px rgba(233,120,160,0.10)">
+          <div style="display:flex;flex-direction:column;gap:6px;max-width:420px">
+            <span style="font-family:'Fredoka',sans-serif;font-weight:600;font-size:26px">Budget for {{ nextKey }}</span>
+            <span style="font-size:13px;color:#8A7A86;text-wrap:pretty">Set a limit per category, using {{ active }} spending as a guide. When you create {{ nextKey }}, these limits appear as progress bars on its dashboard and board.</span>
+            <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+              <button onClick="{{ copyActuals }}" style="font:inherit;font-weight:800;font-size:12px;padding:7px 12px;border:1.5px solid #F8CFDC;border-radius:999px;background:#FFFFFF;color:#3B2F3A;cursor:pointer" style-hover="background:#FFF0E6">Fill with {{ active }} amounts</button>
+              <button onClick="{{ aiBudget }}" disabled="{{ aiBudgetBusy }}" style="font:inherit;font-weight:800;font-size:12px;padding:7px 12px;border:0;border-radius:999px;background:#FDE6EE;color:#A8335A;cursor:pointer" style-hover="background:#FBD5E2">{{ aiBudgetBtn }}</button>
+              <button onClick="{{ clearBudget }}" style="font:inherit;font-weight:800;font-size:12px;padding:7px 12px;border:0;border-radius:999px;background:transparent;color:#8A7A86;cursor:pointer" style-hover="background:#FBEAF0">Clear</button>
+            </div>
+            <sc-if value="{{ hasBudgetNote }}">
+              <span style="margin-top:6px;font-size:13px;line-height:1.45;padding:10px 12px;border-radius:14px;background:#FDE9EF;color:#6E3A4E;text-wrap:pretty"><b>AI note:</b> {{ aiBudgetNote }}</span>
+            </sc-if>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:14px 28px;align-items:flex-end">
+            <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:800;color:#8A7A86">Expected income</span><input type="number" step="0.01" value="{{ expStr }}" onChange="{{ setExp }}" onBlur="{{ blurExp }}" style="width:130px;font-family:'Fredoka',sans-serif;font-weight:600;font-size:20px;padding:6px 10px;border:1.5px solid #CDEFE0;border-radius:12px;background:#F4FBF8;color:#23795D"></div>
+            <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:800;color:#8A7A86">Total budget</span><span style="font-family:'Fredoka',sans-serif;font-weight:600;font-size:24px;color:#B4532A">{{ planTotal }}</span></div>
+            <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:800;color:#8A7A86">Left to save</span><span style="font-family:'Fredoka',sans-serif;font-weight:600;font-size:24px">{{ planLeft }}</span></div>
+          </div>
+        </section>
+        <section style="background:#FFFFFF;border:2px solid #FCE1E9;border-radius:30px;padding:8px 22px;display:flex;flex-direction:column">
+          <sc-if value="{{ notMobile }}" hint-placeholder-val="{{ true }}"><div style="display:grid;grid-template-columns:minmax(140px,1.2fr) 110px 150px minmax(120px,2fr);gap:16px;padding:12px 0;font-size:11px;font-weight:800;color:#8A7A86;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1.5px solid #FBEAF0">
+            <span>Category</span><span style="text-align:right">{{ active }} spent</span><span>{{ nextKey }} budget</span><span></span>
+          </div></sc-if>
+          <sc-for list="{{ planRows }}" as="r" hint-placeholder-count="4">
+            <div style="display:grid;grid-template-columns:{{ planCols }};gap:12px 16px;align-items:center;padding:12px 0;border-bottom:1.5px solid #FBEAF0">
+              <span style="display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px"><span style="width:10px;height:10px;border-radius:50%;background:{{ r.color }}"></span>{{ r.name }}</span>
+              <span style="text-align:right;font-weight:700;font-size:14px;color:#6E5E6A">{{ r.actual }}</span>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;color:#8A7A86;grid-column:{{ planSpan }}">{{ sym }}<input type="number" step="0.01" min="0" placeholder="{{ r.ph }}" value="{{ r.val }}" onChange="{{ r.onChange }}" onBlur="{{ r.onBlur }}" style="width:100%;font:inherit;font-size:14px;font-weight:800;padding:7px 10px;border:1.5px solid #F8CFDC;border-radius:10px;background:#FFFAFB;color:#3B2F3A"></label>
+              <div style="display:flex;flex-direction:column;gap:4px;grid-column:{{ planSpan }}">
+                <div style="height:6px;border-radius:999px;background:#FBEAF0;overflow:hidden"><div style="height:100%;border-radius:999px;width:{{ r.aW }};background:#D9CBC0"></div></div>
+                <div style="height:6px;border-radius:999px;background:#FBEAF0;overflow:hidden"><div style="height:100%;border-radius:999px;width:{{ r.bW }};background:{{ r.color }}"></div></div>
+                <span style="font-size:11px;font-weight:700;color:#8A7A86">{{ r.diff }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </section>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isAi }}">
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px;align-items:start">
+          <sc-for list="{{ insights }}" as="c" hint-placeholder-count="3">
+            <div style="background:#FFFFFF;border:2px solid #FCE1E9;border-radius:30px;padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 6px 0 #FCE1E9, 0 16px 32px rgba(233,120,160,0.10);min-height:150px">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                <span style="display:flex;align-items:center;gap:10px"><span style="width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:15px;background:{{ c.tint }};color:{{ c.fg }}">{{ c.icon }}</span><span style="font-family:'Fredoka',sans-serif;font-weight:600;font-size:18px">{{ c.title }}</span></span>
+                <button onClick="{{ c.onRun }}" disabled="{{ c.busy }}" style="font:inherit;font-weight:800;font-size:12px;padding:6px 12px;border:0;border-radius:999px;background:#FDE6EE;color:#A8335A;cursor:pointer" style-hover="background:#FBD5E2">{{ c.btn }}</button>
+              </div>
+              <sc-if value="{{ c.empty }}"><span style="font-size:13px;color:#8A7A86;text-wrap:pretty">{{ c.sub }}</span></sc-if>
+              <sc-if value="{{ c.has }}">
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <span style="font-size:15px;font-weight:800;line-height:1.4;text-wrap:pretty">{{ c.headline }}</span>
+                  <sc-for list="{{ c.points }}" as="p">
+                    <div style="display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:14px;background:#FFF5F7"><span style="font-size:13px;font-weight:800">{{ p.title }}</span><span style="font-size:13px;line-height:1.45;color:#6E5E6A;text-wrap:pretty">{{ p.text }}</span></div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </section>
+
+        <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:20px;align-items:start">
+          <div style="background:#FFFFFF;border:2px solid #FCE1E9;border-radius:30px;padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 6px 0 #FCE1E9, 0 16px 32px rgba(233,120,160,0.10)">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+              <span style="font-family:'Fredoka',sans-serif;font-weight:600;font-size:21px;display:flex;align-items:center;gap:6px"><span style="color:#F59AB5">✦</span>Ask your money</span>
+              <sc-if value="{{ chatHas }}"><button onClick="{{ clearChat }}" style="font:inherit;font-weight:800;font-size:12px;padding:5px 10px;border:0;border-radius:999px;background:transparent;color:#8A7A86;cursor:pointer" style-hover="background:#FBEAF0">Clear</button></sc-if>
+            </div>
+            <div ref="{{ chatRef }}" style="display:flex;flex-direction:column;gap:8px;max-height:360px;min-height:150px;overflow-y:auto;padding:4px 2px">
+              <sc-if value="{{ chatEmpty }}">
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <span style="font-size:13px;color:#8A7A86">Ask anything about {{ active }}. Try one of these:</span>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px">
+                    <sc-for list="{{ chatSuggest }}" as="q"><button onClick="{{ q.onClick }}" style="font:inherit;font-weight:700;font-size:12px;padding:6px 11px;border:1.5px solid #FCE1E9;border-radius:999px;background:#FFFAFB;color:#3B2F3A;cursor:pointer;text-align:left" style-hover="border-color:#F59AB5">{{ q.text }}</button></sc-for>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-for list="{{ msgs }}" as="m">
+                <div style="max-width:85%;padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.45;white-space:pre-wrap;align-self:{{ m.align }};background:{{ m.bg }};color:{{ m.fg }}">{{ m.text }}</div>
+              </sc-for>
+              <sc-if value="{{ chatBusy }}"><div style="align-self:flex-start;padding:10px 14px;border-radius:16px;font-size:14px;background:#FBEAF0;color:#8A7A86">Thinking…</div></sc-if>
+            </div>
+            <div style="display:flex;gap:8px">
+              <input placeholder="e.g. Can I afford a S$300 trip next month?" value="{{ chatInput }}" onChange="{{ setChat }}" onKeyDown="{{ chatKey }}" style="flex:1;min-width:0;font:inherit;font-size:14px;padding:10px 12px;border:1.5px solid #F8CFDC;border-radius:12px;background:#FFFAFB;color:#3B2F3A">
+              <button onClick="{{ sendChat }}" disabled="{{ chatBusy }}" style="font:inherit;font-weight:800;font-size:13px;padding:10px 16px;border:0;border-radius:999px;background:#C9446F;color:#FFFFFF;cursor:pointer;box-shadow:0 4px 0 #A8335A" style-hover="background:#B83C64;transform:translateY(-1px)">Ask</button>
+            </div>
+          </div>
+
+          <div style="background:#FFFFFF;border:2px solid #FCE1E9;border-radius:30px;padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 6px 0 #FCE1E9, 0 16px 32px rgba(233,120,160,0.10)">
+            <span style="font-family:'Fredoka',sans-serif;font-weight:600;font-size:21px;display:flex;align-items:center;gap:6px"><span style="color:#F59AB5">✦</span>Paste to add</span>
+            <span style="font-size:13px;color:#8A7A86;text-wrap:pretty">Paste a bank SMS, receipt or a quick list. AI turns it into entries for {{ active }}.</span>
+            <textarea rows="5" placeholder="e.g. DBS: You paid SGD 12.50 to GRAB on 03 Feb. Kopi 1.80, chicken rice 4.50" value="{{ pasteText }}" onChange="{{ setPaste }}" style="font:inherit;font-size:14px;line-height:1.45;padding:10px 12px;border:1.5px solid #F8CFDC;border-radius:12px;background:#FFFAFB;color:#3B2F3A;resize:vertical"></textarea>
+            <button onClick="{{ runPaste }}" disabled="{{ pasteBusy }}" style="align-self:flex-start;font:inherit;font-weight:800;font-size:13px;padding:9px 16px;border:0;border-radius:999px;background:#FDE6EE;color:#A8335A;cursor:pointer" style-hover="background:#FBD5E2">{{ pasteBtn }}</button>
+            <sc-if value="{{ hasParsed }}">
+              <div style="display:flex;flex-direction:column;gap:6px;padding-top:6px;border-top:1.5px dashed #FCE1E9">
+                <sc-for list="{{ parsedRows }}" as="r">
+                  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:#FFFAFB;border:1.5px solid #FCE1E9">
+                    <span style="display:flex;align-items:center;gap:8px;min-width:0;font-size:13px"><span style="font-size:11px;font-weight:800;padding:1px 7px;border-radius:999px;background:{{ r.bg }};color:{{ r.fg }}">{{ r.cat }}</span><span style="font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.label }}</span></span>
+                    <span style="display:flex;align-items:center;gap:6px"><span style="font-weight:800;font-size:13px">{{ r.amt }}</span><button onClick="{{ r.onRemove }}" aria-label="Remove" style="border:0;background:transparent;cursor:pointer;color:#8A7A86;font-size:15px;padding:0 4px;border-radius:6px" style-hover="background:#FBEAF0">×</button></span>
+                  </div>
+                </sc-for>
+                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
+                  <button onClick="{{ discardParsed }}" style="font:inherit;font-weight:800;font-size:13px;padding:8px 14px;border:0;border-radius:999px;background:#FBEAF0;color:#3B2F3A;cursor:pointer">Discard</button>
+                  <button onClick="{{ addParsed }}" style="font:inherit;font-weight:800;font-size:13px;padding:8px 16px;border:0;border-radius:999px;background:#C9446F;color:#FFFFFF;cursor:pointer;box-shadow:0 4px 0 #A8335A" style-hover="background:#B83C64;transform:translateY(-1px)">{{ addParsedLabel }}</button>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </section>
+      </div>
+    </sc-if>
+
+    <footer style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;padding-top:8px">
+      <button onClick="{{ exportCsv }}" style="font:inherit;font-weight:700;font-size:12px;padding:7px 12px;border:1.5px solid #F8CFDC;border-radius:999px;background:#FFFFFF;color:#3B2F3A;cursor:pointer" style-hover="background:#FFF0E6">Export CSV</button>
+      <button onClick="{{ askReset }}" style="font:inherit;font-weight:700;font-size:12px;padding:7px 12px;border:1.5px solid #F6C9D6;border-radius:999px;background:#FDE6EE;color:#A8335A;cursor:pointer" style-hover="background:#FBD5E2">Reset to Jan-25 sheet</button>
+    </footer>
+  </main>
+
+  <sc-if value="{{ mobile }}">
+    <button onClick="{{ openAdd }}" aria-label="Add item" style="position:fixed;right:{{ fabRight }};bottom:24px;z-index:41;width:58px;height:58px;border:0;border-radius:50%;background:#C9446F;color:#FFFFFF;font-family:'Fredoka',sans-serif;font-size:32px;line-height:1;cursor:pointer;box-shadow:0 4px 0 #A8335A, 0 10px 24px rgba(201,68,111,0.35)">+</button>
+  </sc-if>
+
+  <sc-if value="{{ toast }}">
+    <div style="position:fixed;bottom:{{ toastBottom }};right:{{ toastRight }};max-width:{{ toastMax }};white-space:normal;line-height:1.35;box-sizing:border-box;z-index:60;background:#C9446F;color:#FFFFFF;font-size:13px;font-weight:800;padding:12px 20px;border-radius:999px;box-shadow:0 8px 24px rgba(59,47,58,0.25)">{{ toast }}</div>
+  </sc-if>
+
+  <sc-if value="{{ modalOpen }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;z-index:50;background:rgba(59,47,58,0.35);display:grid;place-items:{{ modalPlace }};padding:{{ modalPad }}">
+      <div onClick="{{ stop }}" style="width:min(420px,100%);max-height:88vh;overflow-y:auto;box-sizing:border-box;background:#FFFFFF;border-radius:32px;padding:26px;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 50px rgba(59,47,58,0.25)">
+        <span style="font-family:'Fredoka',sans-serif;font-weight:600;font-size:22px">{{ modalTitle }}</span>
+
+        <sc-if value="{{ mEntry }}">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <button onClick="{{ fOut }}" style="font:inherit;font-weight:800;font-size:13px;padding:9px;border-radius:12px;cursor:pointer;border:1.5px solid {{ fOutBd }};background:{{ fOutBg }};color:{{ fOutFg }}">Out · Expense</button>
+              <button onClick="{{ fIn }}" style="font:inherit;font-weight:800;font-size:13px;padding:9px;border-radius:12px;cursor:pointer;border:1.5px solid {{ fInBd }};background:{{ fInBg }};color:{{ fInFg }}">In · Income</button>
+            </div>
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:800;color:#6E5E6A">Item / merchant / source<input placeholder="e.g. Uniqlo, Shopee, Work" value="{{ form.label }}" onChange="{{ setFLabel }}" onBlur="{{ labelBlur }}" style="font:inherit;font-size:14px;padding:9px 12px;border:1.5px solid #F8CFDC;border-radius:12px;background:#FFFAFB;color:#3B2F3A"></label>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                <span style="font-size:12px;font-weight:800;color:#6E5E6A">Category</span>
+                <button onClick="{{ suggestCat }}" disabled="{{ catBusy }}" style="font:inherit;font-weight:800;font-size:11px;padding:3px 9px;border:0;border-radius:999px;background:#FDE6EE;color:#A8335A;cursor:pointer" style-hover="background:#FBD5E2">{{ catBtn }}</button>
+              </div>
+              <select aria-label="Category" value="{{ form.category }}" onChange="{{ setFCat }}" style="font:inherit;font-size:14px;padding:9px 10px;border:1.5px solid #F8CFDC;border-radius:12px;background:#FFFAFB;color:#3B2F3A">
+                <sc-for list="{{ formCats }}" as="o"><option value="{{ o }}">{{ o }}</option></sc-for>
+                <option value="__NEW__">+ New category…</option>
+              </select>
+            </div>
+            <sc-if value="{{ fIsNew }}"><input placeholder="New category name" value="{{ form.newCat }}" onChange="{{ setFNew }}" style="font:inherit;font-size:14px;padding:9px 12px;border:1.5px solid #F8CFDC;border-radius:12px;background:#FFFFFF;color:#3B2F3A"></sc-if>
+            <div style="display:grid;grid-template-columns:1fr 1.3fr;gap:10px">
+              <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:800;color:#6E5E6A">Amount ({{ sym }})<input type="number" step="0.01" min="0" placeholder="0.00" value="{{ form.amount }}" onChange="{{ setFAmt }}" style="font:inherit;font-size:14px;font-weight:800;padding:9px 12px;border:1.5px solid #F8CFDC;border-radius:12px;background:#FFFAFB;color:#3B2F3A"></label>
+              <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:800;color:#6E5E6A">Note (optional)<input placeholder="e.g. Monthly rent" value="{{ form.note }}" onChange="{{ setFNote }}" style="font:inherit;font-size:14px;padding:9px 12px;border:1.5px solid #F8CFDC;border-radius:12px;background:#FFFAFB;color:#3B2F3A"></label>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ mCat }}">
+          <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:800;color:#6E5E6A">Category name<input placeholder="e.g. Groceries" value="{{ form.name }}" onChange="{{ setFName }}" style="font:inherit;font-size:14px;padding:9px 12px;border:1.5px solid #F8CFDC;border-radius:12px;background:#FFFAFB;color:#3B2F3A"></label>
+        </sc-if>
+
+        <sc-if value="{{ mMonth }}">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:800;color:#6E5E6A">Month label<input placeholder="e.g. Feb-25" value="{{ form.name }}" onChange="{{ setFName }}" style="font:inherit;font-size:14px;padding:9px 12px;border:1.5px solid #F8CFDC;border-radius:12px;background:#FFFAFB;color:#3B2F3A"></label>
+            <label style="display:flex;gap:10px;align-items:flex-start;font-size:13px;padding:12px;border-radius:12px;background:#FFF5F7;cursor:pointer"><input type="checkbox" checked="{{ form.copy }}" onChange="{{ setFCopy }}" style="accent-color:#C9446F;margin-top:2px">Copy recurring items (Fixed &amp; Bills, Work salary, Interest)</label>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ mConfirm }}">
+          <span style="font-size:14px;line-height:1.5;color:#6E5E6A">{{ form.text }}</span>
+        </sc-if>
+
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
+          <button onClick="{{ closeModal }}" style="font:inherit;font-weight:800;font-size:13px;padding:9px 16px;border:0;border-radius:999px;background:#FBEAF0;color:#3B2F3A;cursor:pointer" style-hover="background:#F7DCE6">Cancel</button>
+          <button onClick="{{ submitModal }}" style="font:inherit;font-weight:800;font-size:13px;padding:9px 18px;border:0;border-radius:999px;background:#C9446F;color:#FFFFFF;cursor:pointer;box-shadow:0 4px 0 #A8335A" style-hover="background:#B83C64;transform:translateY(-1px)">{{ submitLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showAudit&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;compactCards&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;autoCategorise&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const KEY = 'cashflow_tracker_dc_v1';
+const PAL = [['#FFB86B','#FFF1E0'],['#7CC6F2','#E6F4FC'],['#B49CF0','#F1ECFD'],['#F59AB5','#FDE9EF'],['#7DD3B0','#E5F7EF'],['#F2CC4E','#FDF5D6']];
+const CURS = [
+  { code: 'SGD', sym: 'S$', rate: 1 }, { code: 'USD', sym: 'US$', rate: 0.77 }, { code: 'INR', sym: '₹', rate: 66.5 },
+  { code: 'MYR', sym: 'RM', rate: 3.3 }, { code: 'EUR', sym: '€', rate: 0.67 }, { code: 'GBP', sym: '£', rate: 0.58 },
+];
+const MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const nextOf = k => {
+  const m = /^([A-Za-z]{3})-(\d{2})$/.exec(k || '');
+  if (!m) return k + ' (next)';
+  const i = MN.findIndex(x => x.toLowerCase() === m[1].toLowerCase());
+  if (i < 0) return k + ' (next)';
+  return i === 11 ? 'Jan-' + String((+m[2] + 1) % 100).padStart(2, '0') : MN[i + 1] + '-' + m[2];
+};
+function seedMonths() {
+  let n = 1; const it = (type, category, label, amount, note = '') => ({ id: 'tx_' + (n++), type, category, label, amount, note });
+  const food = [1,1.8,32,3.4,2.9,4,4,4.3,4,3,38,4,2.9,4,4,2.9,4.3,4.3,3.4,3.96,3.96,3.96,3.96,3.96,3.96];
+  const tr = [1.82,4.51,4.68,4.63,4.63,5.91,6.05,6.05,5.96,4.57,4.54,3.5,4.6,6.05,4.63,4.63,6.05,4.63,4.63,4.83,4.63,4.6,4.16,0.87,5.95];
+  const entries = [
+    ...food.map((a, i) => it('Out', 'Food', 'Food', a, 'Entry #' + (i + 1))),
+    ...tr.map((a, i) => it('Out', 'Transport', 'Transport', a, 'Trip #' + (i + 1))),
+    it('Out', 'Fixed & Bills', 'Rental', 800, 'Monthly rent'), it('Out', 'Fixed & Bills', 'Parent', 300, 'Monthly allowance'), it('Out', 'Fixed & Bills', 'Telcom', 10, 'Mobile / telecom'),
+    it('Out', 'Shopping & Insurance', 'De Novo', 6), it('Out', 'Shopping & Insurance', 'Shopee', 24.25, 'Order #1'), it('Out', 'Shopping & Insurance', 'Shopee', 133.38, 'Order #2'),
+    it('Out', 'Shopping & Insurance', 'YUENYUENG', 13.86), it('Out', 'Shopping & Insurance', 'SHENGSHIONG', 13.14, 'Groceries #1'), it('Out', 'Shopping & Insurance', 'Uniqlo', 179.4, 'Purchase #1'),
+    it('Out', 'Shopping & Insurance', 'Uniqlo', 117.6, 'Purchase #2'), it('Out', 'Shopping & Insurance', 'Uniqlo', 39.9, 'Purchase #3'), it('Out', 'Shopping & Insurance', 'Uniqlo', 54.8, 'Purchase #4'),
+    it('Out', 'Shopping & Insurance', 'SHENGSHIONG', 15.79, 'Groceries #2'), it('Out', 'Shopping & Insurance', 'Uniqlo', 9.9, 'Purchase #5'), it('Out', 'Shopping & Insurance', 'Insurance', 279, 'Policy #1'),
+    it('Out', 'Shopping & Insurance', 'Insurance', 3299.25, 'Policy #2'),
+    it('In', 'Work', 'Work', 5246.18, 'Salary'), it('In', 'Reimburse', 'Reimburse', 74.8, 'Reimbursement'),
+    it('In', 'Interest', 'Bank-Salary', 39.79), it('In', 'Interest', 'Bank-Saving', 13.26), it('In', 'Interest', 'OCBC-interest', 1.65), it('In', 'Interest', 'DBS-interest', 0.24), it('In', 'Interest', 'CDP', 0),
+  ];
+  return { 'Jan-25': { entries, outOrder: ['Food','Transport','Fixed & Bills','Shopping & Insurance'], inOrder: ['Work','Reimburse','Interest'] } };
+}
+
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    let d = null;
+    try { d = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+    if (!d || !d.months || !d.months[d.active]) d = { months: seedMonths(), active: 'Jan-25', budgets: {}, expected: {}, cur: 'SGD', rates: {} };
+    this.state = { ...d, budgets: d.budgets || {}, expected: d.expected || {}, rates: d.rates || {}, ai: d.ai || {}, aiNote: d.aiNote || {}, chat: [], chatInput: '', pasteText: '', parsed: null, busy: {}, layout: d.layout || 'auto', narrow: typeof window !== 'undefined' && window.innerWidth < 720, view: 'dash', search: '', dragOver: null, topMode: 'merch', auditOpen: false, modal: null, form: {}, toast: null, edit: {} };
+  }
+  save(patch) {
+    this.setState(patch, () => {
+      const { months, active, budgets, expected, cur, rates, ai, aiNote, layout } = this.state;
+      try { localStorage.setItem(KEY, JSON.stringify({ months, active, budgets, expected, cur, rates, ai, aiNote, layout })); } catch (e) {}
+    });
+  }
+  cur() { const C = CURS.find(c => c.code === this.state.cur) || CURS[0]; return { ...C, rate: this.state.rates[C.code] ?? C.rate }; }
+  ctx() {
+    const st = this.state, s = this.sheet(), C = this.cur(), r = x => (x * C.rate).toFixed(2);
+    const b = st.budgets[st.active] || {};
+    const bl = Object.keys(b).length ? '\nBudget set for this month: ' + Object.entries(b).map(([k, v]) => k + ' ' + r(v)).join(', ') : '';
+    return 'Month: ' + st.active + '. Currency: ' + C.code + ' (' + C.sym + ').\nExpense categories: ' + this.catsOf(s, 'Out').join(', ') + '. Income categories: ' + this.catsOf(s, 'In').join(', ') + '.' + bl +
+      '\nEntries (type | category | item | amount):\n' + s.entries.map(e => e.type + ' | ' + e.category + ' | ' + e.label + (e.note ? ' (' + e.note + ')' : '') + ' | ' + r(e.amount)).join('\n');
+  }
+  sys(json) {
+    return 'You are a cheerful, concise personal finance helper inside a budgeting app. Use only the data provided and never invent transactions. Write amounts like ' + this.cur().sym + '12.34.' +
+      (json ? ' Reply with valid JSON only, no markdown or code fences.' : ' Reply in plain text without markdown, under 120 words.');
+  }
+  json(t) { if (!t) return null; const m = t.match(/[\[{][\s\S]*[\]}]/); if (!m) return null; try { return JSON.parse(m[0]); } catch (e) { return null; } }
+  async ask(key, messages, system, max_tokens = 900) {
+    if (!window.claude || !window.claude.complete) { this.toast('AI is not available here'); return null; }
+    this.setState(s => ({ busy: { ...s.busy, [key]: true } }));
+    try { return await window.claude.complete({ messages, system, max_tokens }); }
+    catch (e) { this.toast('AI is busy, try again in a moment'); return null; }
+    finally { this.setState(s => ({ busy: { ...s.busy, [key]: false } })); }
+  }
+  async runInsight(k) {
+    const P = {
+      summary: 'Write a friendly monthly summary with 3 points: the biggest spending driver, the savings result, and one notable pattern.',
+      alerts: 'Find 2-4 unusual or noteworthy spending items: one-off large payments, repeated small spends that add up, or categories over budget.',
+      tips: 'Give 3 practical savings tips tied to specific merchants or categories in the data, each with an estimated monthly saving.',
+    };
+    const t = await this.ask(k, [{ role: 'user', content: this.ctx() + '\n\nTask: ' + P[k] + '\nJSON shape: {"headline": one sentence, "points": [{"title": short, "text": one or two sentences}]}' }], this.sys(true));
+    const j = this.json(t);
+    if (!j || !Array.isArray(j.points)) { if (t !== null) this.toast("Couldn't read the AI reply, try again"); return; }
+    this.save({ ai: { ...this.state.ai, [this.state.active + ':' + k]: j } });
+  }
+  scrollChat() { if (this.chatEl) this.chatEl.scrollTop = this.chatEl.scrollHeight; }
+  async sendChat(q) {
+    q = (typeof q === 'string' ? q : this.state.chatInput).trim();
+    if (!q || this.state.busy.chat) return;
+    const hist = [...this.state.chat, { role: 'user', content: q }];
+    this.setState({ chat: hist, chatInput: '' }, () => this.scrollChat());
+    const t = await this.ask('chat', [{ role: 'user', content: 'Here is my data:\n' + this.ctx() }, { role: 'assistant', content: 'Got it. What would you like to know?' }, ...hist], this.sys(false), 600);
+    if (t) this.setState({ chat: [...this.state.chat, { role: 'assistant', content: t.trim() }] }, () => this.scrollChat());
+  }
+  async runPaste() {
+    const txt = this.state.pasteText.trim(); if (!txt) return this.toast('Paste some text first');
+    const s = this.sheet(), C = this.cur();
+    const t = await this.ask('paste', [{ role: 'user', content: 'Extract every money entry from the text below. Expense categories: ' + this.catsOf(s, 'Out').join(', ') + '. Income categories: ' + this.catsOf(s, 'In').join(', ') + '. Use an existing category when it fits, otherwise a short new one. Amounts as plain numbers in ' + C.code + '.\nReturn a JSON array: [{"type": "Out" or "In", "category": string, "label": short merchant or source, "amount": number, "note": short string or ""}]\n\nText:\n' + txt }], this.sys(true), 1500);
+    const j = this.json(t);
+    const rows = Array.isArray(j) ? j.filter(x => x && x.label && !isNaN(parseFloat(x.amount))) : [];
+    if (!rows.length) { if (t !== null) this.toast('No entries found in that text'); return; }
+    this.setState({ parsed: rows.map((x, i) => ({ key: i, type: x.type === 'In' ? 'In' : 'Out', category: String(x.category || 'Other').trim(), label: String(x.label).trim(), amount: parseFloat(x.amount) / C.rate, note: String(x.note || '') })) });
+  }
+  addParsed() {
+    const p = this.state.parsed || []; if (!p.length) return;
+    this.updSheet(sh => {
+      p.forEach((x, i) => {
+        const o = x.type === 'Out' ? 'outOrder' : 'inOrder';
+        if (!sh[o].includes(x.category)) sh[o] = [...sh[o], x.category];
+        sh.entries.push({ id: 'tx_' + Date.now() + '_' + i, type: x.type, category: x.category, label: x.label, amount: Math.round(x.amount * 100) / 100, note: x.note });
+      });
+      return sh;
+    }, 'Added ' + p.length + (p.length === 1 ? ' entry' : ' entries'));
+    this.setState({ parsed: null, pasteText: '' });
+  }
+  async suggestCat() {
+    const fm = this.state.form, label = (fm.label || '').trim();
+    if (!label) return this.toast('Type the item name first');
+    const cats = this.catsOf(this.sheet(), fm.type);
+    this.setState({ form: { ...fm, aiFor: label } });
+    const t = await this.ask('cat', [{ role: 'user', content: 'Categorise this ' + (fm.type === 'Out' ? 'expense' : 'income') + ' item: "' + label + '"' + (fm.note ? ' (note: ' + fm.note + ')' : '') + '. Existing categories: ' + cats.join(', ') + '. Pick the best existing one; only propose a short new name if none fit. JSON: {"category": string}' }], this.sys(true), 100);
+    const j = this.json(t); if (!j || !j.category || this.state.modal !== 'entry') return;
+    const c = String(j.category).trim(), hit = cats.find(x => x.toLowerCase() === c.toLowerCase());
+    this.setState({ form: { ...this.state.form, category: hit || '__NEW__', newCat: hit ? '' : c } });
+    this.toast('Suggested category: ' + (hit || c));
+  }
+  async suggestBudget() {
+    const st = this.state, s = this.sheet(), C = this.cur(), nk = nextOf(st.active), cats = this.catsOf(s, 'Out');
+    const exp = (st.expected[nk] ?? s.entries.filter(e => e.type === 'In').reduce((a, e) => a + e.amount, 0)) * C.rate;
+    const t = await this.ask('budget', [{ role: 'user', content: this.ctx() + '\n\nTask: Suggest a realistic budget for each expense category for ' + nk + ', based on this month. Treat one-off or annual items (like large insurance payments) as non-recurring unless they clearly repeat. Expected income: ' + C.sym + exp.toFixed(2) + '. Use these category names exactly: ' + cats.join(', ') + '.\nJSON: {"budgets": {"<category>": number}, "note": one or two sentences explaining the plan}' }], this.sys(true), 600);
+    const j = this.json(t);
+    if (!j || !j.budgets) { if (t !== null) this.toast("Couldn't read the AI reply, try again"); return; }
+    const o = {}; cats.forEach(c => { const v = parseFloat(j.budgets[c]); if (!isNaN(v)) o[c] = Math.round(v / C.rate * 100) / 100; });
+    this.save({ budgets: { ...this.state.budgets, [nk]: o }, edit: {}, aiNote: { ...this.state.aiNote, [nk]: String(j.note || '') } });
+    this.toast('AI budget filled in. Edit any number.');
+  }
+  toast(msg) { clearTimeout(this.tt); this.setState({ toast: msg }); this.tt = setTimeout(() => this.setState({ toast: null }), 2600); }
+  sheet() { return this.state.months[this.state.active]; }
+  updSheet(fn, msg) {
+    const s = this.sheet(); const ns = fn({ ...s, entries: [...s.entries], outOrder: [...s.outOrder], inOrder: [...s.inOrder] });
+    this.save({ months: { ...this.state.months, [this.state.active]: ns } });
+    if (msg) this.toast(msg);
+  }
+  catsOf(s, type) {
+    const set = new Set(type === 'Out' ? s.outOrder : s.inOrder);
+    s.entries.filter(e => e.type === type).forEach(e => set.add(e.category));
+    return [...set];
+  }
+  componentDidMount() { this.onResize = () => { const m = window.innerWidth < 720; if (m !== this.state.narrow) this.setState({ narrow: m }); }; window.addEventListener('resize', this.onResize); this.onResize(); }
+  componentWillUnmount() { clearTimeout(this.tt); window.removeEventListener('resize', this.onResize); }
+
+  renderVals() {
+    const st = this.state, s = this.sheet();
+    const mob = st.layout === 'phone' || (st.layout !== 'laptop' && st.narrow);
+    const framed = mob && !st.narrow;
+    const lay = l => () => { const next = this.state.layout === l ? 'auto' : l; this.save({ layout: next }); this.toast(next === 'auto' ? 'Layout follows your screen size' : (next === 'phone' ? 'Phone layout on' : 'Laptop layout on')); };
+    const layVals = { setPhone: lay('phone'), setLaptop: lay('laptop'),
+      phoneBg: mob ? '#FFFFFF' : 'transparent', phoneFg: mob ? '#C9446F' : '#8A7A86', laptopBg: !mob ? '#FFFFFF' : 'transparent', laptopFg: !mob ? '#C9446F' : '#8A7A86',
+      frameW: framed ? '430px' : 'none', frameShadow: framed ? '0 0 0 2px #FCE1E9, 0 20px 60px rgba(233,120,160,0.18)' : 'none',
+      navSide: framed ? 'calc(50% - 205px)' : '10px', toastRight: framed ? 'calc(50% - 199px)' : '16px', toastMax: framed ? '398px' : 'calc(100% - 32px)', fabRight: framed ? 'calc(50% - 197px)' : '18px' };
+    const C = CURS.find(c => c.code === st.cur) || CURS[0];
+    const rate = st.rates[C.code] ?? C.rate;
+    const f = n => (n < -0.004 ? '−' : '') + C.sym + Math.abs(n * rate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const toBase = str => { const v = parseFloat(str); return isNaN(v) ? NaN : v / rate; };
+    const disp = n => (n * rate).toFixed(2);
+    const sum = a => a.reduce((x, e) => x + e.amount, 0);
+    const outE = s.entries.filter(e => e.type === 'Out'), inE = s.entries.filter(e => e.type === 'In');
+    const tOut = sum(outE), tIn = sum(inE), bal = tIn - tOut;
+    const outCats = this.catsOf(s, 'Out'), inCats = this.catsOf(s, 'In');
+    const ratio = tIn ? tOut / tIn * 100 : 0;
+    const budgetNow = st.budgets[st.active] || {};
+    const nextKey = nextOf(st.active);
+    const view = st.view;
+    const flow = view === 'in' ? 'In' : 'Out';
+
+    const budgetInfo = (cat, t) => {
+      const b = budgetNow[cat];
+      if (b == null || flow === 'In' && view !== 'dash') return { hasBudget: false };
+      const over = t > b;
+      return { hasBudget: true, budgetW: Math.min(b ? t / b * 100 : 100, 100) + '%', budgetBar: over ? '#E8794A' : '#7DD3B0', budgetFg: over ? '#B4532A' : '#23795D',
+        budgetLine: over ? f(t - b) + ' over the ' + f(b) + ' budget' : f(b - t) + ' left of ' + f(b) + ' budget' };
+    };
+
+    let acc = 0;
+    const stops = outCats.map((c, i) => { const p = tOut ? sum(outE.filter(e => e.category === c)) / tOut * 100 : 0; const a = acc; acc += p; return PAL[i % 6][0] + ' ' + a + '% ' + acc + '%'; });
+    const donutBg = tOut > 0 ? 'conic-gradient(' + stops.join(',') + ')' : '#FBEAF0';
+
+    const go = (v, extra = {}) => () => this.setState({ view: v, search: '', ...extra });
+    const dashOut = outCats.map((c, i) => {
+      const items = outE.filter(e => e.category === c), t = sum(items), p = tOut ? t / tOut * 100 : 0;
+      const bi = budgetInfo(c, t);
+      return { name: c, count: items.length, total: f(t), pct: p.toFixed(1) + '%', color: PAL[i % 6][0], tint: PAL[i % 6][1],
+        w: bi.hasBudget ? bi.budgetW : p + '%', barColor: bi.hasBudget ? bi.budgetBar : PAL[i % 6][0], ...bi, onClick: go('out') };
+    });
+    const dashIn = inCats.map(c => { const items = inE.filter(e => e.category === c), t = sum(items), p = tIn ? t / tIn * 100 : 0; return { name: c, count: items.length, total: f(t), pct: p.toFixed(2) + '%', w: p + '%' }; });
+    const inLines = inE.map(e => ({ cat: e.category, label: e.label, amt: f(e.amount) }));
+
+    const mm = new Map();
+    outE.forEach(e => { const k = e.label.trim(); const v = mm.get(k) || { label: k, total: 0, count: 0, category: e.category }; v.total += e.amount; v.count++; mm.set(k, v); });
+    const merch = [...mm.values()].sort((a, b) => b.total - a.total).slice(0, 8);
+    const big = [...outE].sort((a, b) => b.amount - a.amount).slice(0, 10);
+    const topList = st.topMode === 'merch'
+      ? merch.slice(0, mob ? 5 : 8).map((m, i) => ({ rank: i + 1, label: m.label, meta: m.count + '× · ' + m.category, amt: f(m.total), w: (merch[0] ? m.total / merch[0].total * 100 : 0) + '%' }))
+      : big.slice(0, mob ? 5 : 10).map((e, i) => ({ rank: i + 1, label: e.label, meta: e.category + (e.note ? ' · ' + e.note : ''), amt: f(e.amount), w: (big[0] ? e.amount / big[0].amount * 100 : 0) + '%' }));
+
+    const move = (id, cat) => {
+      if (!cat) return;
+      const e = s.entries.find(x => x.id === id); if (!e || e.category === cat) return;
+      this.updSheet(sh => ({ ...sh, entries: sh.entries.map(x => x.id === id ? { ...x, category: cat } : x) }), 'Moved "' + e.label + '" to ' + cat);
+    };
+    const q = st.search.trim().toLowerCase();
+    const boardCats = flow === 'Out' ? outCats : inCats, boardE = flow === 'Out' ? outE : inE, boardT = flow === 'Out' ? tOut : tIn;
+    const cols = boardCats.map((c, i) => {
+      const all = boardE.filter(e => e.category === c), t = sum(all), p = boardT ? t / boardT * 100 : 0;
+      const vis = q ? all.filter(e => e.label.toLowerCase().includes(q) || (e.note || '').toLowerCase().includes(q)) : all;
+      const over = st.dragOver === c;
+      const showItems = !mob || st.openCol === c || !!q;
+      const others = boardCats.filter(x => x !== c);
+      return { name: c, count: all.length, total: f(t), pct: p.toFixed(1) + '%', w: p + '%', color: PAL[i % 6][0], tint: PAL[i % 6][1],
+        border: over ? '#C9446F' : '#FCE1E9', glow: over ? '0 0 0 4px #FDE6EE' : '0 3px 0 #FCE1E9',
+        ...(flow === 'Out' ? budgetInfo(c, t) : { hasBudget: false }),
+        empty: vis.length === 0, showItems, maxH: mob ? '340px' : '460px', showToggle: mob && !q,
+        toggleLabel: showItems ? 'Hide items ▲' : 'Show ' + all.length + ' items ▼',
+        onToggleOpen: () => this.setState({ openCol: this.state.openCol === c ? null : c }),
+        onDragOver: e => { e.preventDefault(); if (this.state.dragOver !== c) this.setState({ dragOver: c }); },
+        onDragLeave: e => { if (!e.currentTarget.contains(e.relatedTarget)) this.setState({ dragOver: null }); },
+        onDrop: e => { e.preventDefault(); const id = e.dataTransfer.getData('text/plain') || this.dragId; this.setState({ dragOver: null }); move(id, c); },
+        onRename: () => this.setState({ modal: 'cat', form: { old: c, name: c } }),
+        onDelete: () => {
+          if (all.length) return this.toast('Move or delete the ' + all.length + ' items in "' + c + '" first');
+          this.setState({ modal: 'confirm', form: { title: 'Remove empty category?', text: 'Remove the empty "' + c + '" column?', ok: 'Remove', fn: () => this.updSheet(sh => flow === 'Out' ? { ...sh, outOrder: sh.outOrder.filter(x => x !== c) } : { ...sh, inOrder: sh.inOrder.filter(x => x !== c) }, 'Removed "' + c + '"') } });
+        },
+        onAdd: () => this.openEntry(flow, c),
+        items: vis.map(e => ({ label: e.label, note: e.note, hasNote: !!e.note && !(this.props.compactCards ?? false), amt: f(e.amount), moveOpts: others,
+          onDragStart: ev => { this.dragId = e.id; ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', e.id); },
+          onDragEnd: () => { this.dragId = null; if (this.state.dragOver) this.setState({ dragOver: null }); },
+          onMove: ev => move(e.id, ev.target.value),
+          onEdit: () => this.setState({ modal: 'entry', form: { id: e.id, type: e.type, category: e.category, newCat: '', label: e.label, amount: disp(e.amount), note: e.note || '' } }),
+          onDel: () => this.setState({ modal: 'confirm', form: { title: 'Delete item?', text: 'Delete "' + e.label + '" (' + f(e.amount) + ') from ' + e.category + '?', ok: 'Delete', fn: () => this.updSheet(sh => ({ ...sh, entries: sh.entries.filter(x => x.id !== e.id) }), 'Item deleted') } }),
+        })) };
+    });
+
+    const nb = st.budgets[nextKey] || {};
+    const setBudget = (cat, base) => {
+      const cur = { ...(this.state.budgets[nextKey] || {}) };
+      if (base == null || isNaN(base)) delete cur[cat]; else cur[cat] = base;
+      this.save({ budgets: { ...this.state.budgets, [nextKey]: cur } });
+    };
+    const actuals = outCats.map(c => sum(outE.filter(e => e.category === c)));
+    const maxBar = Math.max(1, ...actuals, ...outCats.map(c => nb[c] || 0));
+    const planRows = outCats.map((c, i) => {
+      const a = actuals[i], b = nb[c], ek = 'b:' + c;
+      let diff = 'No budget set yet';
+      if (b != null) diff = Math.abs(b - a) < 0.005 ? 'Same as ' + st.active : (b < a ? f(a - b) + ' less than ' + st.active : f(b - a) + ' more than ' + st.active);
+      return { name: c, color: PAL[i % 6][0], actual: f(a), ph: disp(a), val: st.edit[ek] ?? (b != null ? disp(b) : ''), aW: a / maxBar * 100 + '%', bW: (b || 0) / maxBar * 100 + '%', diff,
+        onChange: ev => { const v = ev.target.value; this.setState({ edit: { ...this.state.edit, [ek]: v } }); setBudget(c, v === '' ? null : toBase(v)); },
+        onBlur: () => { const ed = { ...this.state.edit }; delete ed[ek]; this.setState({ edit: ed }); } };
+    });
+    const planTotalB = outCats.reduce((x, c) => x + (nb[c] || 0), 0);
+    const expB = st.expected[nextKey] ?? tIn;
+
+    const fm = st.form, m = st.modal;
+    const formCats = m === 'entry' ? this.catsOf(s, fm.type) : [];
+    const setFm = k => ev => this.setState({ form: { ...this.state.form, [k]: ev.target.value } });
+    const fType = t => () => this.setState({ form: { ...this.state.form, type: t, category: this.catsOf(s, t)[0] || '' } });
+    const fOutOn = fm.type === 'Out', fInOn = fm.type === 'In';
+
+    const tab = (id, label, badge, short, icon) => ({ label, badge, short, icon, text: mob ? short : label, showBadge: badge != null && !mob, mbg: view === id ? '#FDE6EE' : 'transparent', hasBadge: badge != null, onClick: go(id), bg: view === id ? '#FFFFFF' : 'transparent', fg: view === id ? '#C9446F' : '#8A7A86', shadow: view === id ? '0 2px 0 #F8CFDC' : 'none' });
+
+    const insDef = [
+      ['summary', 'Monthly summary', '✦', 'A friendly recap of ' + st.active + ': what drove spending and how much you kept.', '#FDE9EF', '#C9446F'],
+      ['alerts', 'Spending alerts', '!', 'Spots one-off spikes and small spends that quietly add up.', '#FFF1C9', '#7A5A12'],
+      ['tips', 'Savings tips', '↓', 'Ideas to cut back, based on your top merchants and categories.', '#E5F7EF', '#23795D'],
+    ];
+    const insights = insDef.map(([k, title, icon, sub, tint, fg]) => {
+      const r = st.ai[st.active + ':' + k], busy = !!st.busy[k];
+      return { title, icon, sub, tint, fg, busy, empty: !r, has: !!r, headline: (r && r.headline) || '',
+        points: ((r && r.points) || []).map(p => ({ title: p.title || '', text: p.text || '' })),
+        btn: busy ? 'Thinking…' : (r ? 'Refresh' : 'Generate'), onRun: () => this.runInsight(k) };
+    });
+    const parsed = st.parsed || [];
+    const bNote = st.aiNote[nextKey] || '';
+    const ai = {
+      isAi: view === 'ai', insights,
+      msgs: st.chat.map(m => ({ text: m.content, align: m.role === 'user' ? 'flex-end' : 'flex-start', bg: m.role === 'user' ? '#C9446F' : '#FBEAF0', fg: m.role === 'user' ? '#FFFFFF' : '#3B2F3A' })),
+      chatEmpty: st.chat.length === 0 && !st.busy.chat, chatHas: st.chat.length > 0, chatBusy: !!st.busy.chat,
+      chatInput: st.chatInput, setChat: ev => this.setState({ chatInput: ev.target.value }),
+      chatKey: ev => { if (ev.key === 'Enter') { ev.preventDefault(); this.sendChat(); } },
+      sendChat: () => this.sendChat(), clearChat: () => this.setState({ chat: [] }), chatRef: el => { this.chatEl = el; },
+      chatSuggest: ['How much did I spend on Uniqlo?', 'Can I afford a ' + C.sym + '300 trip next month?', 'What was my biggest expense?', 'How much did food cost per day?'].map(text => ({ text, onClick: () => this.sendChat(text) })),
+      pasteText: st.pasteText, setPaste: ev => this.setState({ pasteText: ev.target.value }),
+      runPaste: () => this.runPaste(), pasteBusy: !!st.busy.paste, pasteBtn: st.busy.paste ? 'Reading…' : 'Read it',
+      hasParsed: parsed.length > 0,
+      parsedRows: parsed.map(x => ({ label: x.label, cat: x.category, amt: (x.type === 'In' ? '+' : '') + f(x.amount), bg: x.type === 'In' ? '#E3F6EE' : '#FDEDE4', fg: x.type === 'In' ? '#23795D' : '#B4532A',
+        onRemove: () => this.setState({ parsed: this.state.parsed.filter(p => p.key !== x.key) }) })),
+      addParsed: () => this.addParsed(), discardParsed: () => this.setState({ parsed: null }),
+      addParsedLabel: 'Add ' + parsed.length + (parsed.length === 1 ? ' entry' : ' entries') + ' to ' + st.active,
+      aiBudget: () => this.suggestBudget(), aiBudgetBusy: !!st.busy.budget, aiBudgetBtn: st.busy.budget ? 'Thinking…' : '✦ Suggest with AI',
+      hasBudgetNote: !!bNote, aiBudgetNote: bNote,
+      suggestCat: () => this.suggestCat(), catBusy: !!st.busy.cat, catBtn: st.busy.cat ? 'Thinking…' : '✦ Suggest',
+      labelBlur: () => { const fm2 = this.state.form, l = (fm2.label || '').trim(); if ((this.props.autoCategorise ?? true) && !fm2.id && !fm2.catTouched && l && fm2.aiFor !== l) this.suggestCat(); },
+    };
+    return {
+      ...ai, ...layVals,
+      tabs: [tab('dash', 'Dashboard', null, 'Home', '⌂'), tab('out', 'Expenses', outE.length, 'Spent', '↗'), tab('in', 'Income', inE.length, 'Earned', '↙'), tab('plan', 'Next month budget', null, 'Budget', '◔'), tab('ai', '✦ AI helper', null, 'AI', '✦')],
+      mobile: mob, notMobile: !mob, mainPad: mob ? '14px 12px 100px' : '24px', navWrap: mob ? 'nowrap' : 'wrap', navDisp: mob ? 'grid' : 'flex', tabPad: mob ? '9px 4px' : '8px 14px', navOrder: mob ? '3' : '0', navW: mob ? '100%' : 'auto',
+      planCols: mob ? 'minmax(0,1fr) auto' : 'minmax(140px,1.2fr) 110px 150px minmax(120px,2fr)', planSpan: mob ? '1 / -1' : 'auto',
+      modalPlace: mob ? 'end center' : 'center', modalPad: mob ? '0' : '16px', toastBottom: mob ? '96px' : '20px',
+      active: st.active, monthOpts: Object.keys(st.months),
+      setMonth: ev => { this.save({ active: ev.target.value }); this.toast('Switched to ' + ev.target.value); },
+      openMonth: () => this.setState({ modal: 'month', form: { name: nextKey, copy: true } }),
+      cur: C.code, sym: C.sym, curOpts: CURS.map(c => ({ code: c.code, label: c.sym + ' ' + c.code })),
+      setCur: ev => this.save({ cur: ev.target.value }), showRate: C.code !== 'SGD', rateStr: String(rate),
+      setRate: ev => { const v = parseFloat(ev.target.value); if (v > 0) this.save({ rates: { ...this.state.rates, [C.code]: v } }); },
+      openAdd: () => this.openEntry(view === 'in' ? 'In' : 'Out', ''),
+
+      kIn: f(tIn), kInSub: inE.length + ' items · ' + inCats.length + ' categories',
+      kOut: f(tOut), kOutSub: outE.length + ' items · ' + outCats.length + ' categories',
+      kBal: f(bal), kMood: bal < 0 ? '(｡•́︿•̀｡)' : '(ﾉ◕ヮ◕)ﾉ', kBalTag: bal < 0 ? 'Left · a little over' : 'Left · saved',
+      kRate: (tIn ? (bal / tIn * 100) : 0).toFixed(1) + '% saved',
+      kBarW: Math.min(ratio, 100) + '%', kBarC: ratio > 100 ? '#F2A65A' : '#7DD3B0',
+
+      isDash: view === 'dash', isBoard: view === 'out' || view === 'in', isPlan: view === 'plan',
+      donutBg, dashOut, dashIn, inLines, goOut: go('out'), goIn: go('in'),
+      topList, showMerch: () => this.setState({ topMode: 'merch' }), showBig: () => this.setState({ topMode: 'big' }),
+      merchBg: st.topMode === 'merch' ? '#FFFFFF' : 'transparent', bigBg: st.topMode === 'big' ? '#FFFFFF' : 'transparent',
+      showAudit: (this.props.showAudit ?? true) && st.active === 'Jan-25' && !mob, auditOpen: st.auditOpen, auditLabel: st.auditOpen ? 'Hide' : 'Show',
+      toggleAudit: () => this.setState({ auditOpen: !st.auditOpen }),
+      aFoodLive: f(151.96), aFoodSheet: f(117.16), aFoodDiff: f(34.8), aIntLive: f(54.94), aIntSheet: f(15.15),
+
+      boardTitle: flow === 'Out' ? 'Expenses board · drag cards between columns' : 'Income board · drag cards between columns',
+      boardPillBg: flow === 'Out' ? '#FDEDE4' : '#E3F6EE', boardPillFg: flow === 'Out' ? '#B4532A' : '#23795D',
+      search: st.search, setSearch: ev => this.setState({ search: ev.target.value }),
+      openNewCat: () => this.setState({ modal: 'cat', form: { old: '', name: '' } }),
+      cols,
+
+      nextKey, planRows, planTotal: f(planTotalB), planLeft: f(expB - planTotalB),
+      expStr: st.edit.__exp ?? disp(expB),
+      setExp: ev => { const v = ev.target.value; this.setState({ edit: { ...this.state.edit, __exp: v } }); const b = toBase(v); if (!isNaN(b)) this.save({ expected: { ...this.state.expected, [nextKey]: b } }); },
+      blurExp: () => { const ed = { ...this.state.edit }; delete ed.__exp; this.setState({ edit: ed }); },
+      copyActuals: () => { const o = {}; outCats.forEach((c, i) => { o[c] = Math.round(actuals[i] * 100) / 100; }); this.save({ budgets: { ...this.state.budgets, [nextKey]: o }, edit: {} }); this.toast('Filled with ' + st.active + ' amounts'); },
+      clearBudget: () => this.save({ budgets: { ...this.state.budgets, [nextKey]: {} }, edit: {} }),
+
+      exportCsv: () => {
+        const rows = [['Month','Type','Category','Item','Amount (SGD)','Amount (' + C.code + ')','Note'], ...s.entries.map(e => [st.active, e.type, e.category, e.label, e.amount.toFixed(2), disp(e.amount), e.note || ''])];
+        Object.entries(nb).forEach(([c, b]) => rows.push([nextKey, 'Budget', c, '', b.toFixed(2), disp(b), '']));
+        const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = st.active + '_Cashflow.csv'; document.body.appendChild(a); a.click(); a.remove();
+        this.toast('Exported ' + st.active + '_Cashflow.csv');
+      },
+      askReset: () => this.setState({ modal: 'confirm', form: { title: 'Reset to the Jan-25 sheet?', text: 'This restores all 66 expense items and 7 income items to their original categories. Other months and budgets are removed.', ok: 'Reset', fn: () => { this.save({ months: seedMonths(), active: 'Jan-25', budgets: {}, expected: {}, view: 'dash' }); this.toast('Restored Jan-25 data'); } } }),
+
+      toast: st.toast,
+      modalOpen: !!m, mEntry: m === 'entry', mCat: m === 'cat', mMonth: m === 'month', mConfirm: m === 'confirm',
+      modalTitle: m === 'entry' ? (fm.id ? 'Edit item' : 'Add ' + (fOutOn ? 'expense' : 'income')) : m === 'cat' ? (fm.old ? 'Rename category' : 'New ' + (flow === 'Out' ? 'expense' : 'income') + ' category') : m === 'month' ? 'Create a new month' : (fm.title || ''),
+      submitLabel: m === 'confirm' ? (fm.ok || 'Confirm') : m === 'month' ? 'Create' : 'Save',
+      form: fm, formCats, fIsNew: fm.category === '__NEW__',
+      fOut: fType('Out'), fIn: fType('In'),
+      fOutBg: fOutOn ? '#F08A5D' : '#FFFFFF', fOutFg: fOutOn ? '#FFFFFF' : '#6E5E6A', fOutBd: fOutOn ? '#F08A5D' : '#F8CFDC',
+      fInBg: fInOn ? '#2E9A77' : '#FFFFFF', fInFg: fInOn ? '#FFFFFF' : '#6E5E6A', fInBd: fInOn ? '#2E9A77' : '#F8CFDC',
+      setFCat: ev => this.setState({ form: { ...this.state.form, category: ev.target.value, catTouched: true } }), setFNew: setFm('newCat'), setFLabel: setFm('label'), setFAmt: setFm('amount'), setFNote: setFm('note'), setFName: setFm('name'),
+      setFCopy: ev => this.setState({ form: { ...this.state.form, copy: ev.target.checked } }),
+      closeModal: () => this.setState({ modal: null }), stop: ev => ev.stopPropagation(),
+      submitModal: () => this.submit(toBase),
+    };
+  }
+
+  openEntry(type, cat) {
+    const cats = this.catsOf(this.sheet(), type);
+    const category = cat || cats[0] || '';
+    this.setState({ modal: 'entry', form: { id: '', type, category, catTouched: !!cat, newCat: '', label: category === 'Food' || category === 'Transport' ? category : '', amount: '', note: '' } });
+  }
+
+  submit(toBase) {
+    const { modal: m, form: fm } = this.state;
+    if (m === 'confirm') { this.setState({ modal: null }); fm.fn && fm.fn(); return; }
+    if (m === 'entry') {
+      let cat = fm.category === '__NEW__' ? (fm.newCat || '').trim() : fm.category;
+      const amount = toBase(fm.amount), label = (fm.label || '').trim();
+      if (!cat || !label || isNaN(amount) || amount < 0) return this.toast('Please fill in item, category and amount');
+      amount;
+      this.updSheet(sh => {
+        const order = fm.type === 'Out' ? 'outOrder' : 'inOrder';
+        if (!sh[order].includes(cat)) sh[order] = [...sh[order], cat];
+        const rec = { id: fm.id || 'tx_' + Date.now(), type: fm.type, category: cat, label, amount: Math.round(amount * 100) / 100, note: (fm.note || '').trim() };
+        sh.entries = fm.id ? sh.entries.map(x => x.id === fm.id ? rec : x) : [...sh.entries, rec];
+        return sh;
+      }, fm.id ? 'Item updated' : 'Item added');
+      const v = this.state.view;
+      this.setState({ modal: null, view: v === 'dash' || v === 'plan' ? v : (fm.type === 'Out' ? 'out' : 'in') });
+      return;
+    }
+    if (m === 'cat') {
+      const name = (fm.name || '').trim(); if (!name) return;
+      const flow = this.state.view === 'in' ? 'In' : 'Out', order = flow === 'Out' ? 'outOrder' : 'inOrder';
+      if (fm.old) {
+        this.updSheet(sh => ({ ...sh, [order]: sh[order].map(c => c === fm.old ? name : c), entries: sh.entries.map(e => e.type === flow && e.category === fm.old ? { ...e, category: name } : e) }), 'Renamed to "' + name + '"');
+      } else {
+        this.updSheet(sh => sh[order].includes(name) ? sh : { ...sh, [order]: [...sh[order], name] }, 'Added "' + name + '"');
+      }
+      this.setState({ modal: null });
+      return;
+    }
+    if (m === 'month') {
+      const name = (fm.name || '').trim(); if (!name) return;
+      if (this.state.months[name]) return this.toast('That month already exists');
+      const s = this.sheet(), rec = new Set(['Fixed & Bills', 'Work', 'Interest']);
+      const entries = fm.copy ? s.entries.filter(e => rec.has(e.category)).map((e, i) => ({ ...e, id: 'tx_' + Date.now() + '_' + i })) : [];
+      this.save({ months: { ...this.state.months, [name]: { entries, outOrder: [...s.outOrder], inOrder: [...s.inOrder] } }, active: name, modal: null });
+      this.toast('Created ' + name);
+    }
+  }
+}
+</script>
+</body>
+</html>
