@@ -189,3 +189,17 @@ Use the configured runner; ask before adding one.
 - Ask before adding dependencies, making destructive schema changes, or deviating from the design.
 - Never edit `.env*` values or commit secrets.
 - When you add a component, token or rule, update DESIGN_SYSTEM.md or PRD.md in the same change.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `kahyong93/expensetracker-`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
