@@ -28,6 +28,9 @@ export type MonthData = {
   isSample: boolean;
 };
 
+/** One turn of the AI-2 chat, as sent to the server. */
+export type ChatTurn = { role: "user" | "assistant"; content: string };
+
 export type InsightKind = "summary" | "alerts" | "tips";
 
 export const INSIGHT_KINDS: readonly InsightKind[] = ["summary", "alerts", "tips"];

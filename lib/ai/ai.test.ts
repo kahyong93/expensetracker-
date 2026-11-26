@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CURRENCIES } from '@/lib/money';
 import type { MonthData } from '@/lib/types';
 import { parseCategoryReply } from './parse';
-import { categorisePrompt, monthContext, systemPrompt } from './prompts';
+import { categorisePrompt, chatMessages, monthContext, systemPrompt } from './prompts';
 import { createRateLimiter } from './rate-limit';
 
 const SGD = CURRENCIES[0];
@@ -81,5 +81,20 @@ describe('createRateLimiter', () => {
     t = 1000; // the first request has left the window
     expect(limiter.take('a')).toBe(true);
     expect(limiter.take('a')).toBe(false);
+  });
+});
+
+describe('chatMessages', () => {
+  it('frames the month context like the reference, then the conversation', () => {
+    const history = [
+      { role: 'user' as const, content: 'Biggest expense?' },
+      { role: 'assistant' as const, content: 'Kopi.' },
+      { role: 'user' as const, content: 'And income?' },
+    ];
+    expect(chatMessages('CTX', history)).toEqual([
+      { role: 'user', content: 'Here is my data:\nCTX' },
+      { role: 'assistant', content: 'Got it. What would you like to know?' },
+      ...history,
+    ]);
   });
 });

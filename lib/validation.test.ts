@@ -7,6 +7,7 @@ import {
   parseBudgets,
   parseCategoryName,
   parseCents,
+  parseChatMessages,
   parseCurrencyCode,
   parseEntryInput,
   parseEntryInputs,
@@ -260,5 +261,37 @@ describe("parseInsight (AI reply shape)", () => {
     expect(parseInsight({ ...valid, points: Array.from({ length: 9 }, () => valid.points[0]) })).toBeNull();
     expect(parseInsight({ headline: "", points: [] })).toBeNull();
     expect(parseInsight("Nice month")).toBeNull();
+  });
+});
+
+describe("parseChatMessages (AI-2 chat history)", () => {
+  const user = (content: string) => ({ role: "user", content });
+  const assistant = (content: string) => ({ role: "assistant", content });
+
+  it("accepts up to 10 messages ending with the user's question, trimmed", () => {
+    expect(parseChatMessages([user(" Hi "), assistant("Hello!"), user("Biggest expense?")])).toEqual([
+      { role: "user", content: "Hi" },
+      { role: "assistant", content: "Hello!" },
+      { role: "user", content: "Biggest expense?" },
+    ]);
+    const ten = Array.from({ length: 9 }, (_, i) => assistant(`a${i}`)).concat(user("q"));
+    expect(parseChatMessages(ten)).toHaveLength(10);
+  });
+
+  it("rejects more than 10, an empty list, or a last message not from the user", () => {
+    const eleven = Array.from({ length: 10 }, (_, i) => assistant(`a${i}`)).concat(user("q"));
+    expect(parseChatMessages(eleven)).toBeNull();
+    expect(parseChatMessages([])).toBeNull();
+    expect(parseChatMessages([user("q"), assistant("a")])).toBeNull();
+  });
+
+  it("rejects bad roles, empty or over-long content, and unknown fields", () => {
+    expect(parseChatMessages([{ role: "system", content: "x" }])).toBeNull();
+    expect(parseChatMessages([user("   ")])).toBeNull();
+    expect(parseChatMessages([user("x".repeat(LIMITS.chatMessage + 1))])).toBeNull();
+    expect(parseChatMessages([assistant("x".repeat(LIMITS.chatReply + 1)), user("q")])).toBeNull();
+    expect(parseChatMessages([assistant("x".repeat(LIMITS.chatMessage + 1)), user("q")])).toHaveLength(2);
+    expect(parseChatMessages([{ role: "user", content: "q", extra: 1 }])).toBeNull();
+    expect(parseChatMessages("q")).toBeNull();
   });
 });

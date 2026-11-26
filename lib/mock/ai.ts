@@ -45,22 +45,6 @@ export async function suggestCategory(input: {
   return respond({ category: proposed });
 }
 
-// AI-2 Ask your money ---------------------------------------------------------
-
-export async function askMoney(input: {
-  question: string;
-  monthKey: string;
-  sym: string;
-}): Promise<ActionResult<string>> {
-  const q = input.question.toLowerCase();
-  let reply = `Here's what I can see for ${input.monthKey}: your biggest spend was Insurance at ${input.sym}3,299.25, and you still saved about 14.6% of your income. Ask me about a merchant, a category or a plan!`;
-  if (q.includes("uniqlo")) reply = `You spent ${input.sym}401.60 at Uniqlo in ${input.monthKey}, across 5 purchases. The biggest was ${input.sym}179.40.`;
-  else if (q.includes("afford")) reply = `Probably yes. You kept about ${input.sym}785 in ${input.monthKey}. Without the one-off insurance payment you'd have kept far more, so a trip that size fits if next month is more typical.`;
-  else if (q.includes("biggest")) reply = `Your biggest expense was Insurance (Policy #2) at ${input.sym}3,299.25. That's a one-off annual payment, so it won't repeat every month.`;
-  else if (q.includes("per day") || q.includes("food")) reply = `Food came to ${input.sym}151.96 over 31 days, about ${input.sym}4.90 a day. Two bigger meals (${input.sym}32 and ${input.sym}38) pushed it up.`;
-  return respond(reply);
-}
-
 // AI-3/5/7 Insight cards ------------------------------------------------------
 
 const SAMPLE_INSIGHTS: Record<InsightKind, Insight> = {

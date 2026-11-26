@@ -43,7 +43,7 @@ Columns: **Max tokens** is the answer cap from CLAUDE.md §7. **Saves** says wha
 - **Checks:** a valid category name (≤ 40 chars). An existing category is matched case-insensitively and returns its exact name; anything else is `isNew`.
 - **UI:** `components/entry/entry-modal.tsx`. A match selects the category; a new name fills "+ New category…". Toast "Suggested category: {name}". Runs on blur per PRD AI-1.
 
-### AI-2 Ask your money
+### AI-2 Ask your money ✅ built
 - **Action:** `askMoneyAction(monthKey, messages)` → `string`
 - **Input:** chat history `[{ role: 'user' | 'assistant', content }]`. Only the last 10 are kept. Each message is ≤ 1,000 chars, and the last one must be from the user.
 - **Prompt:** reference `sendChat`: `[user: "Here is my data:\n" + context, assistant: "Got it. What would you like to know?", ...last 10]`, system prompt in plain-text mode.
@@ -83,8 +83,8 @@ Each step is built, checked (typecheck, lint, unit tests, E2E) and committed on 
 | # | Step | Status |
 |---|---|---|
 | 0 | Shared setup (§1) | ✅ built |
-| 1 | AI-1 Auto-categorise | ✅ built, waiting for you to try it |
-| 2 | AI-2 Ask your money | ⏳ |
+| 1 | AI-1 Auto-categorise | ✅ built |
+| 2 | AI-2 Ask your money | ✅ built |
 | 3 | AI-3 Monthly summary | ⏳ |
 | 4 | AI-5 Spending alerts | ⏳ |
 | 5 | AI-7 Savings tips | ⏳ |

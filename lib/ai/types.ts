@@ -1,9 +1,11 @@
+import type { ChatTurn } from '@/lib/types';
+
 /** Shared shapes for the AI helpers (CLAUDE.md §7). */
 
 /** Which feature a request is for. The fake client uses it to pick a canned reply. */
 export type AiTask = 'categorise' | 'chat' | 'summary' | 'alerts' | 'tips' | 'budget' | 'paste';
 
-export type AiMessage = { role: 'user' | 'assistant'; content: string };
+export type AiMessage = ChatTurn;
 
 export type AiRequest = {
   task: AiTask;

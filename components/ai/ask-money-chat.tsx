@@ -6,9 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, SectionTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
-import { AI_BAD_REPLY_MESSAGE, AI_BUSY_MESSAGE, askMoney } from "@/lib/mock/ai";
+import { AI_BAD_REPLY_MESSAGE, AI_BUSY_MESSAGE } from "@/lib/ai-messages";
 import type { DisplayCurrency } from "@/lib/money";
+import type { ChatTurn } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { CHAT_HISTORY_LIMIT, LIMITS } from "@/lib/validation";
+import { askMoneyAction } from "@/server/actions/ai";
 
 type ChatMessage = { id: number; role: "user" | "assistant"; content: string };
 
@@ -55,13 +58,17 @@ export function AskMoneyChat({ monthKey, currency }: AskMoneyChatProps) {
     if (!question || busy) return;
     const gen = generation.current;
     const userId = nextId.current++;
+    // The server gets only the most recent turns (PRD §7.7 guardrails).
+    const history: ChatTurn[] = [...messages, { id: userId, role: "user" as const, content: question }]
+      .slice(-CHAT_HISTORY_LIMIT)
+      .map(({ role, content }) => ({ role, content }));
     setMessages((prev) => [...prev, { id: userId, role: "user", content: question }]);
     setDraft("");
     setBusy(true);
     let reply: string | null = null;
     let error: string | null = null;
     try {
-      const result = await askMoney({ question, monthKey, sym: currency.sym });
+      const result = await askMoneyAction(monthKey, history);
       if (result.ok) reply = result.data.trim();
       else error = result.message;
     } catch {
@@ -160,6 +167,7 @@ export function AskMoneyChat({ monthKey, currency }: AskMoneyChatProps) {
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={onKeyDown}
+          maxLength={LIMITS.chatMessage}
           enterKeyHint="send"
           autoComplete="off"
           className="flex-1"

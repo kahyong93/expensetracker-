@@ -8,6 +8,7 @@ import {
   INSIGHT_KINDS,
   type EntryInput,
   type EntryType,
+  type ChatTurn,
   type Insight,
   type InsightKind,
   type LayoutPref,
@@ -19,6 +20,10 @@ export const LIMITS = {
   note: 140,
   category: 40,
   monthLabel: 20,
+  /** One chat question typed by the user (AI-2). */
+  chatMessage: 1000,
+  /** One AI chat reply sent back as history (AI-2). */
+  chatReply: 4000,
   /** 10 million SGD in cents: guards against typos like extra zeros. */
   maxAmountCents: 1_000_000_000,
 } as const;
@@ -81,6 +86,8 @@ export function validateMonthLabel(name: string): string | null {
 
 /** Caps how many rows one request may add or set (paste-to-add, budgets). */
 export const MAX_ENTRIES_PER_REQUEST = 200;
+/** AI-2 sends only the most recent part of the conversation. */
+export const CHAT_HISTORY_LIMIT = 10;
 const INSIGHT_TEXT_MAX = 600;
 const INSIGHT_POINTS_MAX = 8;
 const AI_NOTE_MAX = 600;
@@ -168,6 +175,24 @@ export function parseBudgets(value: unknown): Record<string, number> | null {
     out[category] = amount;
   }
   return out;
+}
+
+const CHAT_KEYS = ["role", "content"] as const;
+
+/** AI-2: up to CHAT_HISTORY_LIMIT turns, each within limits, ending with the user's question. */
+export function parseChatMessages(value: unknown): ChatTurn[] | null {
+  if (!Array.isArray(value) || value.length === 0 || value.length > CHAT_HISTORY_LIMIT) return null;
+  const out: ChatTurn[] = [];
+  for (const item of value) {
+    if (!hasExactKeys(item, CHAT_KEYS)) return null;
+    const role = item.role === "user" || item.role === "assistant" ? item.role : null;
+    if (!role) return null;
+    const max = role === "user" ? LIMITS.chatMessage : LIMITS.chatReply;
+    const content = boundedText(item.content, max, { required: true });
+    if (content == null) return null;
+    out.push({ role, content });
+  }
+  return out[out.length - 1].role === "user" ? out : null;
 }
 
 export function parseAiNote(value: unknown): string | null {

@@ -2,6 +2,7 @@ import 'server-only';
 import { categoriesOf } from '@/lib/calc';
 import type { DisplayCurrency } from '@/lib/money';
 import type { EntryType, MonthData } from '@/lib/types';
+import type { AiMessage } from './types';
 
 /**
  * Prompt builders (CLAUDE.md §7). Pure: the Server Action loads the user's month and
@@ -39,6 +40,15 @@ export function monthContext(month: MonthData, budgets: Record<string, number>, 
       .map((e) => e.type + ' | ' + e.category + ' | ' + e.label + (e.note ? ' (' + e.note + ')' : '') + ' | ' + displayAmount(e.amountCents, currency))
       .join('\n')
   );
+}
+
+/** AI-2 (reference `sendChat`): the month as an opening exchange, then the conversation. */
+export function chatMessages(context: string, history: readonly AiMessage[]): AiMessage[] {
+  return [
+    { role: 'user', content: 'Here is my data:\n' + context },
+    { role: 'assistant', content: 'Got it. What would you like to know?' },
+    ...history,
+  ];
 }
 
 /** AI-1 (reference `suggestCat`). */

@@ -260,6 +260,23 @@ test('AI-1: auto-categorise on blur picks an existing category; "✦ Suggest" ca
   expect(await entryNamed('Vet visit')).toBeUndefined();
 });
 
+test('AI-2: ask your money answers a starter question and a follow-up; Clear resets', async () => {
+  await nav(/AI helper/).click();
+  const log = page.getByRole('log', { name: 'Ask your money' });
+  await log.getByRole('button', { name: 'What was my biggest expense?' }).click();
+  await expect(log).toContainText('You asked: "What was my biggest expense?"');
+
+  const input = page.getByRole('textbox', { name: 'Ask your money' });
+  await input.fill('And my smallest?');
+  await input.press('Enter');
+  await expect(log).toContainText('You asked: "And my smallest?"');
+
+  await page.getByRole('button', { name: 'Clear' }).click();
+  await expect(log.getByRole('button', { name: 'What was my biggest expense?' })).toBeVisible();
+
+  await nav(/^Expenses/).click(); // later tests start from the expenses board
+});
+
 test('G5/S1: currency switch converts every amount; rates are saved; input converts back to SGD', async () => {
   // SGD state: Earned 3000.00, Spent 15.00 + 6.40 = 21.40
   await expectTotals('S$3,000.00', 'S$21.40', 'S$2,978.60');

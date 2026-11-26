@@ -1,12 +1,12 @@
 'use server';
 
-import { completeJson } from '@/lib/ai/client';
+import { complete, completeJson } from '@/lib/ai/client';
 import { parseCategoryReply, type CategorySuggestion } from '@/lib/ai/parse';
-import { categorisePrompt, systemPrompt } from '@/lib/ai/prompts';
+import { categorisePrompt, chatMessages, monthContext, systemPrompt } from '@/lib/ai/prompts';
 import { CATEGORY_SCHEMA } from '@/lib/ai/schemas';
 import { categoriesOf } from '@/lib/calc';
-import type { ActionResult, EntryType } from '@/lib/types';
-import { LIMITS, parseEntryType, parseMonthLabel } from '@/lib/validation';
+import type { ActionResult, ChatTurn, EntryType } from '@/lib/types';
+import { LIMITS, parseChatMessages, parseEntryType, parseMonthLabel } from '@/lib/validation';
 import { INVALID } from './run-action';
 import { AI_BAD_REPLY, MONTH_MISSING, loadAiMonth, runAi } from './run-ai';
 
@@ -19,6 +19,28 @@ function boundedString(value: unknown, max: number): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
   return trimmed.length > max ? null : trimmed;
+}
+
+/** AI-2 Ask your money: the month as context plus the last few chat turns. */
+export async function askMoneyAction(monthKey: string, messages: ChatTurn[]): Promise<ActionResult<string>> {
+  return runAi(async () => {
+    const key = parseMonthLabel(monthKey);
+    const history = parseChatMessages(messages);
+    if (!key || !history) return INVALID;
+
+    const loaded = await loadAiMonth(key);
+    if (!loaded) return MONTH_MISSING;
+    const { bundle, currency } = loaded;
+
+    const reply = await complete({
+      task: 'chat',
+      system: systemPrompt(currency, false),
+      messages: chatMessages(monthContext(bundle.month, bundle.budgets, currency), history),
+      maxTokens: 600,
+    });
+    // Capped so the reply still passes validation when it comes back as chat history.
+    return reply ? { ok: true, data: reply.slice(0, LIMITS.chatReply) } : AI_BAD_REPLY;
+  });
 }
 
 /** AI-1 Auto-categorise. */

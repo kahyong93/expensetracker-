@@ -34,10 +34,10 @@ function fakeCategory(prompt: string): { category: string } {
   return { category: hint?.category ?? (isExpense ? 'Misc' : 'Other income') };
 }
 
+/** AI-2: echoes the question so tests can tell replies apart. */
 export async function fakeComplete(request: AiRequest): Promise<string> {
   await wait(DELAY_MS);
-  void request;
-  return "Here's what I can see for this month. Ask me about a merchant, a category or a plan!";
+  return `You asked: "${lastUserMessage(request)}". Here's what I can see for this month. Ask me about a merchant, a category or a plan!`;
 }
 
 export async function fakeCompleteJson(request: AiRequest & { schema: JsonSchema }): Promise<unknown> {
