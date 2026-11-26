@@ -196,6 +196,8 @@ AI guardrails:
 - Bad AI output shows "Couldn't read the AI reply, try again".
 - Provider errors or the rate limit show "AI is busy, try again in a moment".
 - Limit: about 15 AI requests per user per minute.
+- Chat (AI-2) sends the month's data plus the last 10 messages of the conversation.
+- Paste to add (AI-6) reads amounts in the currency the user is viewing, then stores them in SGD like typed amounts.
 - Cached results (AI-3/5/7) are stored per month.
 
 ### 7.8 Settings

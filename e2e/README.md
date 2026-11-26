@@ -1,8 +1,8 @@
 # End-to-end tests
 
 `npm run test:e2e` drives the real app in Chromium against the real Clerk development
-instance and the real Neon database. Nothing is mocked except the AI helper, which is
-still a frontend stub (`lib/mock/ai.ts`).
+instance and the real Neon database. Nothing is mocked except the AI provider: the app
+runs with `AI_FAKE=1`, so AI features return canned replies (`lib/ai/fake.ts`).
 
 - **Server:** Playwright builds the app and serves it on port 3100 (`next build && next start`),
   so it doesn't clash with a running `next dev`. To reuse a server you already started on

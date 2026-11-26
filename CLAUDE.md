@@ -24,7 +24,7 @@ Read this file at the start of every session. Source-of-truth docs:
 | Styling | Tailwind CSS v4 (`@tailwindcss/turbopack`, CSS-first config in `app/globals.css`) + shadcn (`components.json`, `@base-ui/react`, cva) |
 | Database + ORM | Neon Postgres (`@neondatabase/serverless`, `drizzle-orm/neon-http`) + Drizzle ORM / drizzle-kit 1.0.0-rc.6. Schema `db/schema.ts`, relations `db/relations.ts`. Schema is applied with `drizzle-kit push` (no migration files) |
 | Auth | Clerk (`@clerk/nextjs` v7); `users.id` = Clerk user id |
-| AI provider / SDK | None installed yet. Ask before adding one |
+| AI provider / SDK | LangChain (`langchain`, `@langchain/core`, `@langchain/openai`) → OpenAI. Model from `AI_MODEL`, key `OPENAI_API_KEY`. Wrapped once in `lib/ai/client.ts`. See `docs/adr/0001-ai-via-langchain.md` |
 | Validation / Tests / Lint | Validation: hand-written parsers in `lib/validation.ts` · Tests: unit = Vitest 4 (`lib/*.test.ts`, colocated, pure helpers only, config `vitest.config.mts`); E2E = Playwright (`@playwright/test` + `@clerk/testing`) in `e2e/`, against a production build, real Clerk dev instance and real Neon · Lint: ESLint 9 + `eslint-config-next` + data-access guardrails (`docs/data-fetching.md` §4) |
 | Scripts | dev `next dev` · build `next build` · lint `eslint` · test `test` (`vitest run`, ~3 s; `test:watch` for watch mode) · `test:e2e` (`playwright test`; builds and serves on :3100, creates and deletes two Clerk test users) · typecheck `tsc --noEmit` · db `db:push` / `db:studio` |
 
@@ -32,19 +32,19 @@ Read this file at the start of every session. Source-of-truth docs:
 - **Server Components by default.** Pages load the signed-in user's data on the server and pass serialisable props down.
 - **Client Components** only for interaction: the board (drag and drop), modals, chat, forms, the layout toggle and toasts. Put `"use client"` on the smallest subtree that needs it.
 - **Mutations** use Server Actions (or route handlers if the project already does). Revalidate the affected month after each one, or update optimistically and reconcile.
-- **AI** goes through route handlers under `app/api/ai/*`. Keys live in server env only.
+- **AI** runs in Server Actions in `server/actions/ai.ts`. They load the signed-in user's month from Neon through `/data` helpers and build the prompt on the server; the client sends only the month key and the user's own input (item name, question, pasted text). Keys live in server env only.
 - **The URL holds month and tab:** `/m/[month]`, `/m/[month]/expenses`, `/income`, `/budget`, `/ai`. The month select navigates; tabs are `<Link>`s.
 
 Target structure (adapt to what exists; don't move files without reason):
 ```
 app/(app)/layout.tsx            header, nav, LayoutMode + Toast providers, session guard
 app/(app)/m/[month]/…           dashboard, expenses, income, budget, ai pages
-app/api/ai/{categorise,chat,insight,budget,paste}/route.ts
 app/api/export/[month]/route.ts CSV
+server/actions/ai.ts            categorise, chat, insight, budget, paste
 components/ui/                  Button, SegmentedControl, Field, Select, Card, Tag, ProgressBar, Modal, Toast, Fab, Skeleton
 components/{header,dashboard,board,budget,ai,icons}/
 lib/money.ts  lib/months.ts  lib/calc.ts  lib/validation.ts  lib/design/palette.ts
-lib/ai/{client,prompts,parse}.ts  lib/db/*  lib/seed/jan25.ts  server/actions/*
+lib/ai/{client,fake,prompts,schemas,parse,rate-limit}.ts  lib/db/*  lib/seed/jan25.ts  server/actions/*
 ```
 
 ## 4. Coding standards
@@ -101,23 +101,29 @@ Money rules:
 Business rules and formulas are in PRD §7–§8. The sample seed in `lib/seed/jan25.ts` is copied from `seedMonths()` in the reference design.
 
 ## 7. AI integration
-- Wrap the existing SDK once as `lib/ai/client.ts` → `complete({ system, messages, maxTokens })`. Nothing else imports the SDK.
-- `lib/ai/prompts.ts` builds the context on the server from the user's month, with amounts in the display currency:
+Decision record: `docs/adr/0001-ai-via-langchain.md`.
+
+- **One wrapper.** `lib/ai/client.ts` is the only file that imports LangChain. It exposes `complete({ task, system, messages, maxTokens })` for plain text and `completeJson({ task, system, messages, maxTokens, schema })` for structured replies. It uses `ChatOpenAI` from `@langchain/openai` with the model from `AI_MODEL`, a 30 s timeout and 1 retry. Only the chat model is used: no agents, LangGraph, tools, memory or LangSmith tracing.
+- **Structured replies** use `withStructuredOutput(jsonSchema, { method: "jsonSchema", strict: true })` with plain JSON Schemas from `lib/ai/schemas.ts` (no zod). OpenAI needs an object at the root, so paste replies are `{ entries: [...] }`. `lib/ai/parse.ts` still checks what matters to the app (real category names, positive amounts, point counts) and returns `null` on a bad shape.
+- **Where it runs.** Server Actions in `server/actions/ai.ts`. Each one re-checks the session, applies the rate limit, loads the signed-in user's month through `/data` helpers (`getAppData`, `getMonthBundle`), builds the prompt with `lib/ai/prompts.ts` and calls the client. The client never sends amounts or categories; the server reads them from Neon.
+- `lib/ai/prompts.ts` builds the context from the user's month, with amounts in the display currency:
   - `Month / Currency / categories / [budgets]`
   - `Entries (type | category | item | amount)`
 - **System prompt:** "You are a cheerful, concise personal finance helper inside a budgeting app. Use only the data provided and never invent transactions. Write amounts like {sym}12.34." Then append either "Reply with valid JSON only, no markdown or code fences." or "Reply in plain text without markdown, under 120 words."
-- Use the task prompts word for word from the reference design: `runInsight`, `suggestBudget`, `runPaste`, `suggestCat`.
+- Use the task prompts word for word from the reference design: `runInsight`, `suggestBudget`, `runPaste`, `suggestCat`. The only change is the paste shape line (`{"entries": [...]}`, see above).
 
-| Route | Output (validate the shape) | Max tokens | Persist |
+| Action | Output (validate the shape) | Max tokens | Persist |
 |---|---|---|---|
 | categorise | `{category}`, matched case-insensitively to existing categories | 100 | no |
-| chat | plain text | 600 | no |
+| chat | plain text; the last 10 messages are sent | 600 | no |
 | insight | `{headline, points:[{title,text}]}` | 900 | AiInsight |
 | budget | `{budgets:{cat:number}, note}`, exact category names only | 600 | Budget + BudgetNote |
-| paste | `[{type,category,label,amount,note}]`, input ≤ 4,000 chars | 1500 | only after user confirms |
+| paste | `{entries:[{type,category,label,amount,note}]}`, input ≤ 4,000 chars, amounts in the display currency | 1500 | only after user confirms |
 
-- Parse by extracting the first `{…}`/`[…]` and running `JSON.parse` in a try/catch. On a bad shape, toast "Couldn't read the AI reply, try again".
-- Rate limit about 15 requests per user per minute and return 429. Toast "AI is busy, try again in a moment".
+- Max tokens is the budget for the visible answer. The client adds a fixed allowance for reasoning models, whose hidden reasoning counts against the same limit.
+- On a bad shape, toast "Couldn't read the AI reply, try again".
+- **Rate limit:** about 15 requests per user per minute, counted in memory per server instance (`lib/ai/rate-limit.ts`). It resets on restart, which is acceptable for a personal app. Over the limit, or on any provider error, toast "AI is busy, try again in a moment".
+- **Tests:** with `AI_FAKE=1` the client returns canned replies from `lib/ai/fake.ts` and never calls OpenAI. Playwright sets it; unit tests never import the real client.
 - Each AI button has its own busy flag. Never log prompts that contain financial data in production. Never send another user's data.
 
 ## 8. State, forms, interactions
@@ -151,7 +157,7 @@ Use the configured runner; ask before adding one.
 - **Unit (required):** `money`, `months` (`nextOf` incl. Dec→Jan), `calc`, `ai/parse`, validation.
 - **Integration:** server actions, including that user A cannot touch user B's data.
 - **E2E** (if available): PRD §13 checklist flows at 390px and 1280px.
-- Mock `lib/ai/client.ts`. Never call the real provider in tests.
+- Never call the real provider in tests: unit tests cover the pure `lib/ai/*` helpers, and E2E runs with `AI_FAKE=1`.
 - Run typecheck, lint and test before finishing any task.
 
 ## 12. How to work

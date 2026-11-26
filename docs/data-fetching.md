@@ -41,13 +41,21 @@ export default async function ExpensesPage({ params }: { params: Promise<{ month
 |---|---|
 | `fetch('/api/…')`, `useEffect` + fetch, SWR, React Query, or any other client-side fetching in a Client Component | Data must never be loaded from the browser |
 | Route handlers (`app/api/**/route.ts`) that return app data for the UI to read | Route handlers are not a data-fetching layer |
-| Server Actions used as "getters" (called just to return data for display) | Server Actions are for mutations only |
+| Server Actions used as "getters" (called just to return data for display) | Server Actions are for mutations only. The one exception is the AI actions below |
 | Importing `db` or a `/data` helper into a file marked `"use client"` | DB code must never reach the client bundle |
 | Reading data in `proxy.ts` (middleware) | Middleware handles auth/routing only |
 
 ### Mutations
 
 Writes go through **Server Actions**. They also use `/data` helpers, so the rules in §2 and §3 still apply. After a write, the action revalidates the affected path (`revalidatePath`). Fresh data then reaches the UI **by the Server Component re-rendering**, not by the client fetching it again. Optimistic UI is fine, but what the client shows in the end always comes from Server Component props.
+
+### The one exception: AI actions
+
+The AI Server Actions in `server/actions/ai.ts` (CLAUDE.md §7) may **read** the signed-in user's month through `/data` helpers (`getAppData`, `getMonthBundle`). They need it to build the prompt on the server, so the client never sends amounts or categories it could fake. The rules still hold:
+
+- They read only through `/data` helpers, which scope every query to the signed-in user (§3).
+- They return the AI's answer (a category, a chat reply, an insight, suggested rows), never raw records for the UI to display.
+- Anything they save (insights, budgets and the AI note) goes through `/data` write helpers and revalidates the month layout, like any other mutation.
 
 ---
 
