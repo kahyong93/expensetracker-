@@ -1,130 +1,334 @@
+/* Layer order: Clerk's component styles sit below Tailwind utilities so appearance classes win
+   (components/auth/clerk-appearance.ts, cssLayerName "clerk"). */
+@layer theme, base, clerk, components, utilities;
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* ------------------------------------------------------------------
+   Design tokens: DESIGN_SYSTEM.md §2 (colour) and §5 (shape).
+   Components reference these via the Tailwind mappings below
+   (bg-cf-*, text-cf-*, border-cf-*, rounded-cf-*, shadow-cf-*).
+   Never use raw hex in components.
+   ------------------------------------------------------------------ */
+:root {
+  /* §2.1 Brand and neutrals */
+  --cf-bg: #fff5f7;
+  --cf-bg-dot: #fad2de;
+  --cf-header-glass: rgba(255, 245, 247, 0.92);
+  --cf-surface: #ffffff;
+  --cf-field: #fffafb;
+  --cf-surface-hover: #fff8fa;
+  --cf-track: #fbeaf0;
+  --cf-line: #fce1e9;
+  --cf-line-strong: #f8cfdc;
+  --cf-line-danger: #f6c9d6;
+  --cf-soft: #fde6ee;
+  --cf-soft-hover: #fbd5e2;
+  --cf-soft-note: #fde9ef;
+  --cf-note-ink: #6e3a4e;
+  --cf-cancel-hover: #f7dce6;
+  --cf-peach-hover: #fff0e6;
+  --cf-sparkle: #f59ab5;
+  --cf-primary: #c9446f;
+  --cf-primary-hover: #b83c64;
+  --cf-primary-deep: #a8335a;
+  --cf-ink: #3b2f3a;
+  --cf-ink-soft: #6e5e6a;
+  --cf-ink-muted: #8a7a86;
+  --cf-overlay: rgba(59, 47, 58, 0.35);
+  --cf-neutral-bar: #d9cbc0;
+
+  /* Logo tile (§6 mascot / header brand) */
+  --cf-logo-tile: #ffd6e2;
+  --cf-logo-shadow: #f8b9cc;
+  --cf-logo-cheek: #f9a8c0;
+
+  /* §2.2 Income (mint) */
+  --cf-in-fill: #ddf5ea;
+  --cf-in-border: #bcead4;
+  --cf-in-tint: #e3f6ee;
+  --cf-in-tint-hover: #cdefe0;
+  --cf-in-tag: #23795d;
+  --cf-in-num: #1e6e54;
+  --cf-in-sub: #3f7f69;
+  --cf-in-bar: #3fae8a;
+  --cf-in-toggle: #2e9a77;
+  --cf-in-cheek: #9fe0c3;
+  --cf-in-input-fill: #f4fbf8;
+  --cf-under-budget: #7dd3b0;
+
+  /* §2.2 Expense (peach) */
+  --cf-out-fill: #ffe6da;
+  --cf-out-border: #ffcdb8;
+  --cf-out-tint: #fdede4;
+  --cf-out-tint-hover: #fbdccb;
+  --cf-out-tag: #b4532a;
+  --cf-out-num: #a44a24;
+  --cf-out-sub: #9a5a3e;
+  --cf-out-toggle: #f08a5d;
+  --cf-out-cheek: #ffb59a;
+  --cf-over-budget: #e8794a;
+
+  /* §2.2 Balance (butter) */
+  --cf-bal-fill: #fff2c4;
+  --cf-bal-border: #f7de8c;
+  --cf-bal-tint: #fff1c9;
+  --cf-bal-tag: #7a5a12;
+  --cf-bal-num: #3b2f3a;
+  --cf-saving-bar: #7dd3b0;
+  --cf-overspent-bar: #f2a65a;
+
+  /* §7.3 invalid field state */
+  --cf-invalid-border: #e8794a;
+  --cf-invalid-text: #b4532a;
+
+  /* §5 Radius */
+  --cf-r-pill: 999px;
+  --cf-r-modal: 32px;
+  --cf-r-card: 30px;
+  --cf-r-column: 28px;
+  --cf-r-card-sm: 26px;
+  --cf-r-item: 20px;
+  --cf-r-tile: 18px;
+  --cf-r-bubble: 16px;
+  --cf-r-inner: 14px;
+  --cf-r-input: 12px;
+  --cf-r-input-sm: 10px;
+  --cf-r-xs: 8px;
+
+  /* §5 Shadows */
+  --cf-shadow-card: 0 6px 0 #fce1e9, 0 16px 32px rgba(233, 120, 160, 0.1);
+  --cf-shadow-kpi-in: 0 6px 0 #bcead4;
+  --cf-shadow-kpi-out: 0 6px 0 #ffcdb8;
+  --cf-shadow-kpi-bal: 0 6px 0 #f7de8c;
+  --cf-shadow-strip: 0 4px 0 #fce1e9;
+  --cf-shadow-column: 0 3px 0 #fce1e9;
+  --cf-shadow-drop: 0 0 0 4px #fde6ee;
+  --cf-shadow-btn: 0 4px 0 #a8335a;
+  --cf-shadow-btn-pressed: 0 2px 0 #a8335a;
+  --cf-shadow-fab: 0 4px 0 #a8335a, 0 10px 24px rgba(201, 68, 111, 0.35);
+  --cf-shadow-fab-pressed: 0 2px 0 #a8335a, 0 6px 16px rgba(201, 68, 111, 0.3);
+  --cf-shadow-tab: 0 2px 0 #f8cfdc;
+  --cf-shadow-logo: 0 4px 0 #f8b9cc;
+  --cf-shadow-modal: 0 20px 50px rgba(59, 47, 58, 0.25);
+  --cf-shadow-toast: 0 8px 24px rgba(59, 47, 58, 0.25);
+  --cf-shadow-frame: 0 0 0 2px #fce1e9, 0 20px 60px rgba(233, 120, 160, 0.18);
+
+  /* shadcn base variables, pointed at the cf palette */
+  --background: var(--cf-bg);
+  --foreground: var(--cf-ink);
+  --card: var(--cf-surface);
+  --card-foreground: var(--cf-ink);
+  --popover: var(--cf-surface);
+  --popover-foreground: var(--cf-ink);
+  --primary: var(--cf-primary);
+  --primary-foreground: #ffffff;
+  --secondary: var(--cf-track);
+  --secondary-foreground: var(--cf-ink);
+  --muted: var(--cf-track);
+  --muted-foreground: var(--cf-ink-muted);
+  --accent: var(--cf-soft);
+  --accent-foreground: var(--cf-primary-deep);
+  --destructive: var(--cf-over-budget);
+  --border: var(--cf-line);
+  --input: var(--cf-line-strong);
+  --ring: var(--cf-primary);
+  --radius: 0.75rem;
+}
 
 @theme inline {
+  --font-heading: var(--font-fredoka), ui-rounded, sans-serif;
+  --font-body: var(--font-nunito), ui-sans-serif, sans-serif;
+  --font-sans: var(--font-nunito), ui-sans-serif, sans-serif;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-cf-bg: var(--cf-bg);
+  --color-cf-bg-dot: var(--cf-bg-dot);
+  --color-cf-header-glass: var(--cf-header-glass);
+  --color-cf-surface: var(--cf-surface);
+  --color-cf-field: var(--cf-field);
+  --color-cf-surface-hover: var(--cf-surface-hover);
+  --color-cf-track: var(--cf-track);
+  --color-cf-line: var(--cf-line);
+  --color-cf-line-strong: var(--cf-line-strong);
+  --color-cf-line-danger: var(--cf-line-danger);
+  --color-cf-soft: var(--cf-soft);
+  --color-cf-soft-hover: var(--cf-soft-hover);
+  --color-cf-soft-note: var(--cf-soft-note);
+  --color-cf-note-ink: var(--cf-note-ink);
+  --color-cf-cancel-hover: var(--cf-cancel-hover);
+  --color-cf-peach-hover: var(--cf-peach-hover);
+  --color-cf-sparkle: var(--cf-sparkle);
+  --color-cf-primary: var(--cf-primary);
+  --color-cf-primary-hover: var(--cf-primary-hover);
+  --color-cf-primary-deep: var(--cf-primary-deep);
+  --color-cf-ink: var(--cf-ink);
+  --color-cf-ink-soft: var(--cf-ink-soft);
+  --color-cf-ink-muted: var(--cf-ink-muted);
+  --color-cf-overlay: var(--cf-overlay);
+  --color-cf-neutral-bar: var(--cf-neutral-bar);
+  --color-cf-logo-tile: var(--cf-logo-tile);
+
+  --color-cf-in-fill: var(--cf-in-fill);
+  --color-cf-in-border: var(--cf-in-border);
+  --color-cf-in-tint: var(--cf-in-tint);
+  --color-cf-in-tint-hover: var(--cf-in-tint-hover);
+  --color-cf-in-tag: var(--cf-in-tag);
+  --color-cf-in-num: var(--cf-in-num);
+  --color-cf-in-sub: var(--cf-in-sub);
+  --color-cf-in-bar: var(--cf-in-bar);
+  --color-cf-in-toggle: var(--cf-in-toggle);
+  --color-cf-in-input-fill: var(--cf-in-input-fill);
+  --color-cf-under-budget: var(--cf-under-budget);
+
+  --color-cf-out-fill: var(--cf-out-fill);
+  --color-cf-out-border: var(--cf-out-border);
+  --color-cf-out-tint: var(--cf-out-tint);
+  --color-cf-out-tint-hover: var(--cf-out-tint-hover);
+  --color-cf-out-tag: var(--cf-out-tag);
+  --color-cf-out-num: var(--cf-out-num);
+  --color-cf-out-sub: var(--cf-out-sub);
+  --color-cf-out-toggle: var(--cf-out-toggle);
+  --color-cf-over-budget: var(--cf-over-budget);
+
+  --color-cf-bal-fill: var(--cf-bal-fill);
+  --color-cf-bal-border: var(--cf-bal-border);
+  --color-cf-bal-tint: var(--cf-bal-tint);
+  --color-cf-bal-tag: var(--cf-bal-tag);
+  --color-cf-bal-num: var(--cf-bal-num);
+  --color-cf-saving-bar: var(--cf-saving-bar);
+  --color-cf-overspent-bar: var(--cf-overspent-bar);
+
+  --color-cf-invalid-border: var(--cf-invalid-border);
+  --color-cf-invalid-text: var(--cf-invalid-text);
+
+  --radius-cf-pill: var(--cf-r-pill);
+  --radius-cf-modal: var(--cf-r-modal);
+  --radius-cf-card: var(--cf-r-card);
+  --radius-cf-column: var(--cf-r-column);
+  --radius-cf-card-sm: var(--cf-r-card-sm);
+  --radius-cf-item: var(--cf-r-item);
+  --radius-cf-tile: var(--cf-r-tile);
+  --radius-cf-bubble: var(--cf-r-bubble);
+  --radius-cf-inner: var(--cf-r-inner);
+  --radius-cf-input: var(--cf-r-input);
+  --radius-cf-input-sm: var(--cf-r-input-sm);
+  --radius-cf-xs: var(--cf-r-xs);
+
+  --shadow-cf-card: var(--cf-shadow-card);
+  --shadow-cf-kpi-in: var(--cf-shadow-kpi-in);
+  --shadow-cf-kpi-out: var(--cf-shadow-kpi-out);
+  --shadow-cf-kpi-bal: var(--cf-shadow-kpi-bal);
+  --shadow-cf-strip: var(--cf-shadow-strip);
+  --shadow-cf-column: var(--cf-shadow-column);
+  --shadow-cf-drop: var(--cf-shadow-drop);
+  --shadow-cf-btn: var(--cf-shadow-btn);
+  --shadow-cf-btn-pressed: var(--cf-shadow-btn-pressed);
+  --shadow-cf-fab: var(--cf-shadow-fab);
+  --shadow-cf-fab-pressed: var(--cf-shadow-fab-pressed);
+  --shadow-cf-tab: var(--cf-shadow-tab);
+  --shadow-cf-logo: var(--cf-shadow-logo);
+  --shadow-cf-modal: var(--cf-shadow-modal);
+  --shadow-cf-toast: var(--cf-shadow-toast);
+  --shadow-cf-frame: var(--cf-shadow-frame);
+
+  --animate-cf-pulse: cf-pulse 1.2s ease-in-out infinite;
+
+  @keyframes cf-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.55;
+    }
+  }
 }
 
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+/* Pink paper with the dot pattern (DESIGN_SYSTEM §2.1). Used by body and the framed phone preview. */
+@utility bg-cf-paper {
+  background-color: var(--cf-bg);
+  background-image: radial-gradient(var(--cf-bg-dot) 1.3px, transparent 1.4px);
+  background-size: 24px 24px;
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
+
   html {
-    @apply font-sans;
+    font-family: var(--font-body);
+  }
+
+  body {
+    margin: 0;
+    color: var(--cf-ink);
+    font-family: var(--font-body);
+    font-variant-numeric: tabular-nums;
+    background-color: var(--cf-bg);
+    background-image: radial-gradient(var(--cf-bg-dot) 1.3px, transparent 1.4px);
+    background-size: 24px 24px;
+  }
+
+  a {
+    color: var(--cf-primary);
+  }
+
+  a:hover {
+    color: var(--cf-primary-deep);
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--cf-primary);
+    outline-offset: 2px;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--cf-ink-muted);
+  }
+
+  /* §3: 16px form controls on phone widths to stop iOS zoom-on-focus */
+  @media (max-width: 719px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+
+  /* §9 Reduced motion: drop transforms and the pulse */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+    .motion-safe-transform,
+    button,
+    a {
+      transform: none !important;
+    }
   }
 }

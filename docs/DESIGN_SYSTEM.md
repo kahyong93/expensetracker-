@@ -304,6 +304,7 @@ All buttons use font weight 800 (outline buttons 700) and `cursor: pointer`.
   - Then an optional budget bar.
 - **Item list:** padding 10, gap 8, `min-height: 110px`, scrolls past `max-height` (460 laptop / 340 phone).
 - **Item card:** `--cf-field`, 1.5 `--cf-line`, r 20, padding `11px 14px`, `cursor: grab`, hover border `--cf-sparkle` with a white fill. It shows the label (13/800), an optional note (11 muted), the amount, a "Move to…" select (11px, r 8, max-width 120), and Edit/Delete text buttons.
+  - **Saving state:** while an added item is still being saved (optimistic placeholder), the card is at 70% opacity with `cursor: progress` and `aria-busy`; Move, Edit and Delete are disabled and it can't be dragged until the saved copy arrives.
 - **Column footer:** a full-width "+ Add to {name}" button (12/800 `--cf-ink-soft`, top border 1.5 `--cf-track`). On phone, add a "Show N items ▼ / Hide items ▲" toggle in `--cf-primary`.
 - **Drag over:** border `--cf-primary` plus `--cf-shadow-drop`.
 - **Keyboard and touch:** the "Move to…" select is the accessible way to move items. Never remove it.
@@ -348,7 +349,8 @@ Uses the card styles with padding 20 and `min-height 150`.
 - Sticky, with `--cf-header-glass` and blur, and a 2px `--cf-line` bottom border. It is a wrapping flex row:
   1. Brand: logo tile, wordmark and subtitle.
   2. Main nav.
-  3. Controls: layout toggle, Month select, "+ Month", Currency select, rate input (non-SGD only: "S$1 = [input] sym", input 70px r 10), and "+ Add item" (laptop only).
+  3. Controls: layout toggle, Month select, "+ Month", Currency select, rate input (non-SGD only: "S$1 = [input] sym", input 70px r 10), Settings, and "+ Add item" (laptop only).
+- **Settings** (PRD §7.8, §14 Q1): an Outline `md` button holding only the gear line icon (§6), `aria-label="Settings"`, 44px square on phone. It opens a Modal titled "Settings" with one checkbox row (§7 Field `CheckboxRow`) per setting (S3–S5, labels word for word from the PRD) and Cancel / Save. Save stores only the changed settings and toasts "Settings saved".
 
 ### 7.12 Footer
 Right-aligned, wrapping: "Export CSV" (Outline) and "Reset to sample data" (Danger-soft).
@@ -428,3 +430,29 @@ All user-facing strings are owned by `PRD.md` and the prototype; use them word f
 2. Use colour only for money direction (§2.2) or category identity (§2.3), never decoration.
 3. Every new component must define hover, focus-visible, disabled and phone behaviour before it ships.
 4. No new fonts, colours, radii or shadow recipes without updating this file first.
+
+---
+
+## 12. Implementation additions (frontend build, Nov 2026)
+
+Tokens added to `app/globals.css` for values already used in the reference design but not named above:
+- `--cf-logo-tile` `#FFD6E2`, `--cf-logo-shadow` `#F8B9CC`, `--cf-logo-cheek` `#F9A8C0` (header logo tile).
+- `--cf-in-input-fill` `#F4FBF8` (expected-income input, §2.2).
+- `--cf-invalid-border` `#E8794A`, `--cf-invalid-text` `#B4532A` (invalid state, §7.3).
+- `--cf-shadow-btn-pressed` `0 2px 0 #A8335A` and `--cf-shadow-fab-pressed` (pressed state, §9).
+- Per-role KPI shadows `--cf-shadow-kpi-in|out|bal` (§5 `--cf-shadow-kpi`).
+- Tailwind utility `bg-cf-paper`: the dot-pattern ground, used by the body and the framed phone preview.
+
+Components added beyond §7:
+- **Confirm** (`components/ui/confirm.tsx`, `useConfirm()`): the Confirm modal variant of §7.9 as a promise-based hook.
+- **Shell skeleton** (`components/shell/shell-skeleton.tsx`): prerendered laptop-shaped fallback while the month/tab stream in.
+- **Month missing** (`components/shell/month-missing.tsx`): card shown when the URL month doesn't exist, with a primary link to the latest month.
+
+Sign-in and sign-up (PRD A1):
+- **Auth frame** (`components/auth/auth-frame.tsx`): signed-out screens on the dot paper; centred logo tile, Fredoka 26/600 wordmark in `--cf-primary`, 12px muted subtitle.
+- **Welcome** (`components/auth/welcome.tsx`, `/`): Card (max 420px, centred) with one line of copy, a primary "Sign in" and an outline "Create account" button. Both open Clerk's modal. Signed-in users are forwarded to their latest month.
+- **First run** (`components/shell/first-run.tsx`, `/`, PRD A3): shown to a signed-in user with no months. Same auth frame and card as Welcome: one line of copy, a primary "Start fresh" and an outline "Try with sample data" button (size `touch`, full width). The chosen button reads "Setting up…" / "Loading…" while both are disabled; an error shows as a 12px bold `--cf-invalid-text` line under the buttons (`role="alert"`).
+- **Logo tile** (`components/header/logo-tile.tsx`): the header logo tile, shared with the auth frame.
+- **Account button** (`components/header/account-button.tsx`): Clerk `UserButton` at the end of the header controls; avatar 36px on laptop, 44px on phone. Its menu holds "Sign out".
+- **Clerk appearance** (`components/auth/clerk-appearance.ts`): Clerk variables mapped to tokens: primary `--cf-primary`, text `--cf-ink` / `--cf-ink-muted`, surface `--cf-surface`, border `--cf-line-strong`, error `--cf-invalid-text`, backdrop `--cf-overlay`, font Nunito, radius `--cf-r-input`. Card `--cf-r-modal` + 2px `--cf-line` + `--cf-shadow-modal`; primary button pill + `--cf-shadow-btn`; titles Fredoka. Clerk's CSS sits in the `clerk` layer, declared before Tailwind's utilities in `app/globals.css`.
+- **Button size `touch`**: min-height 44px, padding 10px 20px, 13px. For full-width actions that must meet the phone hit target.

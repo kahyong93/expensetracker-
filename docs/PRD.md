@@ -106,7 +106,7 @@ Priority: **P0** = must for MVP, **P1** = should for MVP, **P2** = later.
 ### 7.1 Accounts and onboarding
 | ID | Requirement | P |
 |---|---|---|
-| A1 | Sign up, sign in, sign out and reset password, using the project's existing auth solution. Screens are styled per DESIGN_SYSTEM. | P0 |
+| A1 | Sign up, sign in, sign out and reset password, using the project's existing auth solution. Screens are styled per DESIGN_SYSTEM. Signed-out visitors land on a welcome page whose "Sign in" and "Create account" buttons open Clerk's sign-in / sign-up as a modal; opening an app page while signed out returns to the welcome page with sign-in open. Sign out is in the account menu (avatar) in the header. | P0 |
 | A2 | Each user's data (months, entries, categories, budgets, settings, AI results) is visible and editable only by that user. | P0 |
 | A3 | **First run:** a new user chooses between "Start fresh" (creates the current month, e.g. `Nov-26`, with default categories) and "Try with sample data" (loads the Jan-25 sample). | P0 |
 | A4 | Default categories for "Start fresh": Out: Food, Transport, Fixed & Bills, Shopping & Insurance. In: Work, Reimburse, Interest. | P0 |
@@ -296,7 +296,7 @@ Use these to check the success metrics below.
 
 | # | Question | Default if not answered |
 |---|---|---|
-| Q1 | Where does the Settings entry sit in the header, and how does it look? | A small icon button after the currency select, opening a modal |
+| Q1 | Where does the Settings entry sit in the header, and how does it look? | **Decided (default taken):** a small gear icon button after the currency select, opening a modal (DESIGN_SYSTEM §7.11) |
 | Q2 | Should recurring categories for "copy recurring items" be user-configurable? | Fixed list in v1 (Fixed & Bills, Work, Interest) |
 | Q3 | Design for sign-in, sign-up and the first-run choice screen? | Built from DESIGN_SYSTEM components (card, fields, primary button, mascot) |
 | Q4 | Can a user delete a whole month? | Yes, with typed confirmation, in v1.1 |

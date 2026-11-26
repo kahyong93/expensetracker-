@@ -1,57 +1,84 @@
-import { Button as ButtonPrimitive } from "@base-ui/react/button"
-import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "cn"
+import { cva, type VariantProps } from "class-variance-authority";
+import type { ComponentProps } from "react";
+import { cn } from "@/lib/utils";
 
+/**
+ * Buttons (DESIGN_SYSTEM §7.1, states §9). Feature code never restyles a button;
+ * add a variant here instead. `buttonVariants` can style a <Link> the same way.
+ */
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  [
+    "inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-cf-pill font-body font-extrabold",
+    "transition-[background-color,transform,border-color,box-shadow] duration-120 ease-out",
+    "disabled:cursor-not-allowed disabled:opacity-55 aria-disabled:cursor-not-allowed aria-disabled:opacity-55",
+    "no-underline [&_svg]:shrink-0",
+  ],
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
+        /** Solid pink candy with 3D shadow. One per surface. */
+        primary:
+          "bg-cf-primary text-white shadow-cf-btn not-disabled:hover:bg-cf-primary-hover not-disabled:hover:-translate-y-px not-disabled:active:translate-y-0.5 not-disabled:active:shadow-cf-btn-pressed",
+        /** AI actions: Generate/Refresh, ✦ Suggest, Read it. */
+        soft: "bg-cf-soft text-cf-primary-deep not-disabled:hover:bg-cf-soft-hover not-disabled:active:bg-cf-line-strong",
+        /** + Month, + Category, Fill with…, Export CSV. */
         outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
-        ghost:
-          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
-        destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
-        link: "text-primary underline-offset-4 hover:underline",
+          "border-[1.5px] border-cf-line-strong bg-cf-surface font-bold text-cf-ink not-disabled:hover:bg-cf-peach-hover not-disabled:active:bg-cf-out-tint",
+        /** Reset to sample data. */
+        dangerSoft:
+          "border-[1.5px] border-cf-line-danger bg-cf-soft font-bold text-cf-primary-deep not-disabled:hover:bg-cf-soft-hover not-disabled:active:bg-cf-line-strong",
+        /** Cancel, Discard. */
+        neutral: "bg-cf-track text-cf-ink not-disabled:hover:bg-cf-cancel-hover not-disabled:active:bg-cf-line-strong",
+        /** Clear, Delete (item). */
+        ghost: "bg-transparent text-cf-ink-muted not-disabled:hover:bg-cf-track not-disabled:active:bg-cf-cancel-hover",
+        /** Edit (item), Hide/Show. */
+        text: "bg-transparent text-cf-primary not-disabled:hover:bg-cf-soft not-disabled:active:bg-cf-soft-hover",
+        /** "Expenses board →". */
+        roleOut: "bg-cf-out-tint text-cf-out-tag not-disabled:hover:bg-cf-out-tint-hover",
+        /** "Income board →". */
+        roleIn: "bg-cf-in-tint text-cf-in-tag not-disabled:hover:bg-cf-in-tint-hover",
+        /** Rename / delete column icon buttons. Always pass aria-label. */
+        icon: "rounded-cf-xs bg-transparent p-1 text-cf-ink-muted not-disabled:hover:bg-cf-surface not-disabled:active:bg-cf-track",
       },
       size: {
-        default:
-          "h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        icon: "size-8",
-        "icon-xs":
-          "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm":
-          "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
-        "icon-lg": "size-9",
+        /** padding 9px 16px, 13px. */
+        lg: "px-4 py-[9px] text-[13px]",
+        /** padding 8px 12px, 13px. */
+        md: "px-3 py-2 text-[13px]",
+        /** padding 6px 12px, 12px. */
+        sm: "px-3 py-1.5 text-xs",
+        /** 44px phone hit target (CLAUDE.md §10), 13px. Welcome page actions. */
+        touch: "min-h-11 px-5 py-2.5 text-[13px]",
+        /** padding 3px 8px, 11px. */
+        xs: "px-2 py-[3px] text-[11px]",
+        /** For variant="icon". */
+        icon: "",
+      },
+      block: {
+        true: "w-full",
+        false: "",
       },
     },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-)
+    compoundVariants: [
+      { variant: "text", size: "xs", className: "rounded-cf-xs" },
+      { variant: "ghost", size: "xs", className: "rounded-cf-xs" },
+    ],
+    defaultVariants: { variant: "primary", size: "lg", block: false },
+  },
+);
 
-function Button({
-  className,
-  variant = "default",
-  size = "default",
-  ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+type ButtonProps = ComponentProps<"button"> & VariantProps<typeof buttonVariants>;
+
+function Button({ className, variant, size, block, type = "button", ...props }: ButtonProps) {
   return (
-    <ButtonPrimitive
+    <button
+      type={type}
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(buttonVariants({ variant, size, block }), className)}
       {...props}
     />
-  )
+  );
 }
 
-export { Button, buttonVariants }
+export { Button, buttonVariants };
+export type { ButtonProps };

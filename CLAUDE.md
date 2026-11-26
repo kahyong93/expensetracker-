@@ -4,6 +4,7 @@ Read this file at the start of every session. Source-of-truth docs:
 - `PRD.md` covers **what** to build: features, behaviour, copy, acceptance criteria.
 - `DESIGN_SYSTEM.md` covers **how it looks**: tokens, components, responsive rules, states.
 - This file covers **how to build it**.
+- `docs/data-fetching.md` covers **how data is read and written**: Server Components only, `/data` helpers with Drizzle (no raw SQL), and every query scoped to the signed-in user. **Read it before touching any data code.**
 - **Reference design:** `Cashflow Tracker v2.dc.html` in `expensetracker\docs\reference` (in the repo: `docs/reference/`). Read-only; never edit it.
 
 > **Read and follow `DESIGN_SYSTEM.md` before implementing or modifying any UI.** If code and docs disagree: the PRD decides behaviour, DESIGN_SYSTEM decides visuals. If something isn't covered, ask. Don't invent.
@@ -24,8 +25,8 @@ Read this file at the start of every session. Source-of-truth docs:
 | Database + ORM | Neon Postgres (`@neondatabase/serverless`, `drizzle-orm/neon-http`) + Drizzle ORM / drizzle-kit 1.0.0-rc.6. Schema `db/schema.ts`, relations `db/relations.ts`. Schema is applied with `drizzle-kit push` (no migration files) |
 | Auth | Clerk (`@clerk/nextjs` v7); `users.id` = Clerk user id |
 | AI provider / SDK | None installed yet. Ask before adding one |
-| Validation / Tests / Lint | Validation: none yet · Tests: none yet (ask before adding) · Lint: ESLint 9 + `eslint-config-next` |
-| Scripts | dev `next dev` · build `next build` · lint `eslint` · test none · typecheck `tsc --noEmit` · db `db:push` / `db:studio` |
+| Validation / Tests / Lint | Validation: hand-written parsers in `lib/validation.ts` · Tests: unit = Vitest 4 (`lib/*.test.ts`, colocated, pure helpers only, config `vitest.config.mts`); E2E = Playwright (`@playwright/test` + `@clerk/testing`) in `e2e/`, against a production build, real Clerk dev instance and real Neon · Lint: ESLint 9 + `eslint-config-next` + data-access guardrails (`docs/data-fetching.md` §4) |
+| Scripts | dev `next dev` · build `next build` · lint `eslint` · test `test` (`vitest run`, ~3 s; `test:watch` for watch mode) · `test:e2e` (`playwright test`; builds and serves on :3100, creates and deletes two Clerk test users) · typecheck `tsc --noEmit` · db `db:push` / `db:studio` |
 
 ## 3. Architecture
 - **Server Components by default.** Pages load the signed-in user's data on the server and pass serialisable props down.
