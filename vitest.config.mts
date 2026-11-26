@@ -9,7 +9,11 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     // Mirrors the tsconfig "@/*" path.
-    alias: [{ find: /^@\//, replacement: fileURLToPath(new URL("./", import.meta.url)) }],
+    alias: [
+      { find: /^@\//, replacement: fileURLToPath(new URL("./", import.meta.url)) },
+      // `server-only` throws outside a React Server environment; lib/ai/* imports it.
+      { find: /^server-only$/, replacement: fileURLToPath(new URL("./test/server-only.ts", import.meta.url)) },
+    ],
   },
   test: {
     include: ["lib/**/*.test.ts"],

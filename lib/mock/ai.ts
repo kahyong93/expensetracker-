@@ -7,9 +7,9 @@
  */
 import type { ActionResult, EntryType, Insight, InsightKind } from "@/lib/types";
 
-export const AI_BUSY_MESSAGE = "AI is busy, try again in a moment";
-export const AI_BAD_REPLY_MESSAGE = "Couldn't read the AI reply, try again";
-export const PASTE_MAX_CHARS = 4000;
+import { PASTE_MAX_CHARS } from "@/lib/ai-messages";
+
+export { AI_BAD_REPLY_MESSAGE, AI_BUSY_MESSAGE, PASTE_MAX_CHARS } from "@/lib/ai-messages";
 
 const DELAY_MS = 900;
 

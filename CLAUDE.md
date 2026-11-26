@@ -101,7 +101,7 @@ Money rules:
 Business rules and formulas are in PRD §7–§8. The sample seed in `lib/seed/jan25.ts` is copied from `seedMonths()` in the reference design.
 
 ## 7. AI integration
-Decision record: `docs/adr/0001-ai-via-langchain.md`.
+Decision record: `docs/adr/0001-ai-via-langchain.md`. Per-feature spec and build status: `docs/specs/ai-features.md`.
 
 - **One wrapper.** `lib/ai/client.ts` is the only file that imports LangChain. It exposes `complete({ task, system, messages, maxTokens })` for plain text and `completeJson({ task, system, messages, maxTokens, schema })` for structured replies. It uses `ChatOpenAI` from `@langchain/openai` with the model from `AI_MODEL`, a 30 s timeout and 1 retry. Only the chat model is used: no agents, LangGraph, tools, memory or LangSmith tracing.
 - **Structured replies** use `withStructuredOutput(jsonSchema, { method: "jsonSchema", strict: true })` with plain JSON Schemas from `lib/ai/schemas.ts` (no zod). OpenAI needs an object at the root, so paste replies are `{ entries: [...] }`. `lib/ai/parse.ts` still checks what matters to the app (real category names, positive amounts, point counts) and returns `null` on a bad shape.

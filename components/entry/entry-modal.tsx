@@ -8,13 +8,13 @@ import { useMonthView, useMutate } from "@/components/providers/cashflow-data-pr
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { categoriesOf } from "@/lib/calc";
-import { suggestCategory } from "@/lib/mock/ai";
 import type { Entry, EntryType } from "@/lib/types";
 import { centsToInput, type PrefilledAmount } from "@/lib/money";
 import { monthHref, tabFromPathname } from "@/lib/months";
 import { pendingEntryId } from "@/lib/optimistic";
 import { cn } from "@/lib/utils";
 import { ENTRY_INVALID_MESSAGE, validateEntry, type EntryFieldErrors } from "@/lib/validation";
+import { suggestCategoryAction } from "@/server/actions/ai";
 import { addEntryAction, updateEntryAction } from "@/server/actions/entries";
 
 export type EntryModalRequest =
@@ -111,7 +111,7 @@ export function EntryModal({ request, onClose }: { request: EntryModalRequest; o
     }
     set({ suggestedFor: label });
     setBusy(true);
-    const res = await suggestCategory({ label, type: form.type, categories });
+    const res = await suggestCategoryAction(monthKey, { type: form.type, label, note: form.note });
     setBusy(false);
     if (!res.ok) {
       toast(res.message);

@@ -33,6 +33,8 @@ export default defineConfig({
     // A production build: stable and fast, and it doesn't clash with a running `next dev`.
     command: `npx next build && npx next start -p ${PORT}`,
     url: `http://localhost:${PORT}`,
+    // Canned AI replies (lib/ai/fake.ts): tests never call OpenAI.
+    env: { AI_FAKE: '1' },
     reuseExistingServer: !!process.env.E2E_REUSE_SERVER,
     timeout: 420_000,
   },

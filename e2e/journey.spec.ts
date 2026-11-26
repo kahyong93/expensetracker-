@@ -241,6 +241,25 @@ test('E2: "+ New category…" in the item form creates the category on save', as
   await expect.poll(async () => await entryNamed('Latte')).toMatchObject({ category: 'Coffee', cents: 640, type: 'Out' });
 });
 
+test('AI-1: auto-categorise on blur picks an existing category; "✦ Suggest" can propose a new one', async () => {
+  // The app runs with AI_FAKE=1: canned replies, no provider call.
+  await page.getByRole('button', { name: '+ Add item' }).click();
+  const d = dialog();
+  await d.getByLabel('Item / merchant / source').fill('Grab home');
+  await d.getByLabel(/^Amount/).focus(); // blur the item name
+  await toast(page, 'Suggested category: Transport');
+  await expect(d.getByLabel('Category', { exact: true })).toHaveValue('Transport');
+
+  await d.getByLabel('Item / merchant / source').fill('Vet visit');
+  await d.getByRole('button', { name: '✦ Suggest' }).click();
+  await toast(page, 'Suggested category: Misc');
+  await expect(d.getByLabel('New category name')).toHaveValue('Misc');
+
+  await page.keyboard.press('Escape');
+  await expect(dialog()).toBeHidden();
+  expect(await entryNamed('Vet visit')).toBeUndefined();
+});
+
 test('G5/S1: currency switch converts every amount; rates are saved; input converts back to SGD', async () => {
   // SGD state: Earned 3000.00, Spent 15.00 + 6.40 = 21.40
   await expectTotals('S$3,000.00', 'S$21.40', 'S$2,978.60');
