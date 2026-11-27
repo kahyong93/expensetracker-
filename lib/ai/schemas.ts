@@ -34,3 +34,22 @@ export const INSIGHT_SCHEMA: JsonSchema = {
   required: ['headline', 'points'],
   additionalProperties: false,
 };
+
+/** AI-4: `{ budgets: { <each expense category>: number }, note }`, built per request. */
+export function budgetSchema(categories: readonly string[]): JsonSchema {
+  return {
+    title: 'budget_reply',
+    type: 'object',
+    properties: {
+      budgets: {
+        type: 'object',
+        properties: Object.fromEntries(categories.map((c) => [c, { type: 'number' }])),
+        required: [...categories],
+        additionalProperties: false,
+      },
+      note: { type: 'string' },
+    },
+    required: ['budgets', 'note'],
+    additionalProperties: false,
+  };
+}

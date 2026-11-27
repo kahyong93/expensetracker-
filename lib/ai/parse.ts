@@ -1,6 +1,7 @@
 import 'server-only';
 import type { Insight, InsightKind } from '@/lib/types';
-import { parseCategoryName, parseInsight } from '@/lib/validation';
+import { displayToCents, type DisplayCurrency } from '@/lib/money';
+import { LIMITS, parseAiNote, parseCategoryName, parseInsight } from '@/lib/validation';
 
 /**
  * App-level checks on structured AI replies (CLAUDE.md §7). The schema already fixes the
@@ -40,4 +41,30 @@ export function parseInsightReply(value: unknown, kind: InsightKind): Insight | 
   if (!isRecord(value) || !Array.isArray(value.points)) return null;
   const insight = parseInsight({ headline: value.headline, points: value.points.slice(0, rule.max) });
   return insight && insight.points.length >= rule.min ? insight : null;
+}
+
+export type BudgetSuggestion = {
+  /** Expense category → SGD cents. */
+  budgets: Record<string, number>;
+  note: string;
+};
+
+/**
+ * AI-4: keeps exact category names only, converts each display-currency amount to SGD
+ * cents, and drops negative or non-finite amounts. Null when nothing usable is left.
+ */
+export function parseBudgetReply(
+  value: unknown,
+  categories: readonly string[],
+  currency: DisplayCurrency,
+): BudgetSuggestion | null {
+  if (!isRecord(value) || !isRecord(value.budgets) || typeof value.note !== 'string') return null;
+  const note = parseAiNote(value.note);
+  if (note == null) return null;
+  const budgets: Record<string, number> = {};
+  for (const category of categories) {
+    const cents = displayToCents(value.budgets[category], currency);
+    if (cents != null && cents <= LIMITS.maxAmountCents) budgets[category] = cents;
+  }
+  return Object.keys(budgets).length > 0 ? { budgets, note } : null;
 }

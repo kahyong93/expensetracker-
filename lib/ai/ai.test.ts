@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { CURRENCIES } from '@/lib/money';
 import type { MonthData } from '@/lib/types';
-import { parseCategoryReply, parseInsightReply } from './parse';
-import { categorisePrompt, chatMessages, insightPrompt, monthContext, systemPrompt } from './prompts';
+import { parseBudgetReply, parseCategoryReply, parseInsightReply } from './parse';
+import { budgetPrompt, categorisePrompt, chatMessages, insightPrompt, monthContext, systemPrompt } from './prompts';
+import { budgetSchema } from './schemas';
 import { createRateLimiter } from './rate-limit';
 
 const SGD = CURRENCIES[0];
@@ -159,5 +160,42 @@ describe('tips (AI-7)', () => {
     expect(parseInsightReply(reply(2), 'tips')).toBeNull();
     expect(parseInsightReply(reply(3), 'tips')).toEqual(reply(3));
     expect(parseInsightReply(reply(4), 'tips')).toEqual(reply(3));
+  });
+});
+
+describe('smart budget (AI-4)', () => {
+  const cats = ['Food', 'Fixed & Bills'];
+
+  it('uses the reference budget task with expected income in the display currency', () => {
+    expect(budgetPrompt({ context: 'CTX', nextKey: 'Feb-25', currency: USD, expectedCents: 500000, categories: cats })).toBe(
+      'CTX\n\nTask: Suggest a realistic budget for each expense category for Feb-25, based on this month. Treat one-off or annual items (like large insurance payments) as non-recurring unless they clearly repeat. Expected income: US$2500.00. Use these category names exactly: Food, Fixed & Bills.' +
+        '\nJSON: {"budgets": {"<category>": number}, "note": one or two sentences explaining the plan}',
+    );
+  });
+
+  it('builds a strict form with one required number per category', () => {
+    const schema = budgetSchema(cats);
+    const budgets = schema.properties.budgets as { properties: Record<string, unknown>; required: string[]; additionalProperties: boolean };
+    expect(Object.keys(budgets.properties)).toEqual(cats);
+    expect(budgets.required).toEqual(cats);
+    expect(budgets.additionalProperties).toBe(false);
+    expect(schema.required).toEqual(['budgets', 'note']);
+  });
+
+  it('keeps exact category names, converts display amounts to SGD cents, and keeps the note', () => {
+    expect(parseBudgetReply({ budgets: { Food: 50, 'Fixed & Bills': 0, Pets: 50 }, note: ' Trimmed a little. ' }, cats, USD)).toEqual({
+      budgets: { Food: 10000, 'Fixed & Bills': 0 },
+      note: 'Trimmed a little.',
+    });
+  });
+
+  it('drops negative or non-finite amounts, and rejects a reply with no usable budget or a bad note', () => {
+    expect(parseBudgetReply({ budgets: { Food: -5, 'Fixed & Bills': 20 }, note: '' }, cats, SGD)).toEqual({
+      budgets: { 'Fixed & Bills': 2000 },
+      note: '',
+    });
+    expect(parseBudgetReply({ budgets: { Food: -5 }, note: 'x' }, cats, SGD)).toBeNull();
+    expect(parseBudgetReply({ budgets: { Food: 5 }, note: 42 }, cats, SGD)).toBeNull();
+    expect(parseBudgetReply({ budgets: 'nope', note: 'x' }, cats, SGD)).toBeNull();
   });
 });

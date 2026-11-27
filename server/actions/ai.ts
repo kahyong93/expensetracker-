@@ -1,11 +1,19 @@
 'use server';
 
 import * as insightsData from '@/data/insights';
+import * as plansData from '@/data/plans';
 import { complete, completeJson } from '@/lib/ai/client';
-import { parseCategoryReply, parseInsightReply, type CategorySuggestion } from '@/lib/ai/parse';
-import { categorisePrompt, chatMessages, insightPrompt, monthContext, systemPrompt } from '@/lib/ai/prompts';
-import { CATEGORY_SCHEMA, INSIGHT_SCHEMA } from '@/lib/ai/schemas';
-import { categoriesOf } from '@/lib/calc';
+import {
+  parseBudgetReply,
+  parseCategoryReply,
+  parseInsightReply,
+  type BudgetSuggestion,
+  type CategorySuggestion,
+} from '@/lib/ai/parse';
+import { budgetPrompt, categorisePrompt, chatMessages, insightPrompt, monthContext, systemPrompt } from '@/lib/ai/prompts';
+import { CATEGORY_SCHEMA, INSIGHT_SCHEMA, budgetSchema } from '@/lib/ai/schemas';
+import { categoriesOf, monthTotals } from '@/lib/calc';
+import { nextOf } from '@/lib/months';
 import type { ActionResult, ChatTurn, EntryType, Insight, InsightKind } from '@/lib/types';
 import { LIMITS, parseChatMessages, parseEntryType, parseInsightKind, parseMonthLabel } from '@/lib/validation';
 import { INVALID } from './run-action';
@@ -70,6 +78,53 @@ export async function generateInsightAction(monthKey: string, kind: InsightKind)
 
       const saved = await insightsData.saveInsight(key, k, insight);
       return saved.ok ? { ok: true, data: insight } : saved;
+    },
+    { revalidate: true },
+  );
+}
+
+/**
+ * AI-4 Smart budget: suggests next month's budget for every expense category and saves it
+ * with the AI note under next month's key (which may not exist yet, PRD P8).
+ */
+export async function suggestBudgetAction(monthKey: string): Promise<ActionResult<BudgetSuggestion>> {
+  return runAi(
+    async () => {
+      const key = parseMonthLabel(monthKey);
+      if (!key) return INVALID;
+
+      const loaded = await loadAiMonth(key);
+      if (!loaded) return MONTH_MISSING;
+      const { bundle, currency } = loaded;
+      const categories = categoriesOf(bundle.month, 'Out');
+      if (categories.length === 0) return INVALID;
+      const nextKey = nextOf(key);
+      // P3: expected income defaults to this month's income.
+      const expectedCents = bundle.nextPlan.expectedCents ?? monthTotals(bundle.month).earnedCents;
+
+      const reply = await completeJson({
+        task: 'budget',
+        system: systemPrompt(currency, true),
+        messages: [
+          {
+            role: 'user',
+            content: budgetPrompt({
+              context: monthContext(bundle.month, bundle.budgets, currency),
+              nextKey,
+              currency,
+              expectedCents,
+              categories,
+            }),
+          },
+        ],
+        maxTokens: 600,
+        schema: budgetSchema(categories),
+      });
+      const suggestion = parseBudgetReply(reply, categories, currency);
+      if (!suggestion) return AI_BAD_REPLY;
+
+      await plansData.replaceBudgets(nextKey, suggestion.budgets, suggestion.note);
+      return { ok: true, data: suggestion };
     },
     { revalidate: true },
   );

@@ -389,6 +389,26 @@ test('S3-S5: settings modal saves per user; compact cards hide notes', async () 
   await expect.poll(async () => (await snapshot(ids.a)).user?.compactCards).toBe(false);
 });
 
+test('AI-4: "✦ Suggest with AI" fills and saves next month\'s budget and AI note', async () => {
+  await nav(/^Next month budget/).click();
+  await page.getByRole('button', { name: 'Suggest with AI' }).click(); // the ✦ is aria-hidden
+  await toast(page, 'AI budget filled in. Edit any number.');
+  const note = 'I set every category to 100 to keep next month simple.';
+  await expect(page.getByText(note)).toBeVisible();
+  await expect(page.getByLabel(`Food budget for ${NEXT} (S$)`)).toHaveValue('100.00');
+
+  const plan = async () => (await snapshot(ids.a)).plans.find((p) => p.monthKey === NEXT);
+  await expect.poll(async () => (await plan())?.aiNote).toBe(note);
+  const lines = (await plan())!.budgetLines;
+  expect(lines.length).toBeGreaterThan(0);
+  expect(lines.every((l) => l.amountCents === 10000)).toBe(true);
+
+  // Leave next month empty for the P1-P9 test.
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+  await expect.poll(async () => (await plan())?.budgetLines.length).toBe(0);
+  await expect.poll(async () => (await plan())?.aiNote ?? null).toBeNull();
+});
+
 test('P1-P9: next month budget saves per month key, fill and clear work', async () => {
   await nav(/^Next month budget/).click();
   await expect(page.getByRole('heading', { name: `Budget for ${NEXT}` })).toBeVisible();

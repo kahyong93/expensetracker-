@@ -4,6 +4,7 @@ import {
   CURRENCIES,
   centsToInput,
   currencyLabel,
+  displayToCents,
   formatMoney,
   inputToCents,
   isCurrencyCode,
@@ -129,5 +130,20 @@ describe("toCents", () => {
     expect(toCents(151.96)).toBe(15196);
     expect(toCents(0.29)).toBe(29);
     expect(toCents(3299.25)).toBe(329925);
+  });
+});
+
+describe("displayToCents (AI amounts)", () => {
+  it("converts a display-currency number to SGD cents with the input rule", () => {
+    expect(displayToCents(12.34, BASE_CURRENCY)).toBe(1234);
+    expect(displayToCents(77, USD)).toBe(10000); // 77 / 0.77
+    expect(displayToCents(0, USD)).toBe(0);
+  });
+
+  it("rejects negative, non-finite and non-number values", () => {
+    expect(displayToCents(-1, BASE_CURRENCY)).toBeNull();
+    expect(displayToCents(Number.NaN, BASE_CURRENCY)).toBeNull();
+    expect(displayToCents(Number.POSITIVE_INFINITY, BASE_CURRENCY)).toBeNull();
+    expect(displayToCents("12", BASE_CURRENCY)).toBeNull();
   });
 });

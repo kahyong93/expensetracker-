@@ -68,6 +68,24 @@ export function insightPrompt(context: string, kind: InsightKind): string {
   return context + '\n\nTask: ' + INSIGHT_TASKS[kind] + '\n' + INSIGHT_SHAPE;
 }
 
+/** AI-4 (reference `suggestBudget`). Expected income is SGD cents, shown in the display currency. */
+export function budgetPrompt(input: {
+  context: string;
+  nextKey: string;
+  currency: DisplayCurrency;
+  expectedCents: number;
+  categories: readonly string[];
+}): string {
+  return (
+    input.context +
+    '\n\nTask: Suggest a realistic budget for each expense category for ' + input.nextKey +
+    ', based on this month. Treat one-off or annual items (like large insurance payments) as non-recurring unless they clearly repeat. Expected income: ' +
+    input.currency.sym + displayAmount(input.expectedCents, input.currency) +
+    '. Use these category names exactly: ' + input.categories.join(', ') +
+    '.\nJSON: {"budgets": {"<category>": number}, "note": one or two sentences explaining the plan}'
+  );
+}
+
 /** AI-1 (reference `suggestCat`). */
 export function categorisePrompt(input: {
   type: EntryType;

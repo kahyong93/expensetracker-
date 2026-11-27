@@ -13,9 +13,10 @@ import { useMutate } from "@/components/providers/cashflow-data-provider";
 import { useLayoutMode } from "@/components/providers/layout-mode-provider";
 import { useToast } from "@/components/ui/toast";
 import { actualsByCategory, categoriesOf, monthTotals, planRows, planTotals } from "@/lib/calc";
-import { AI_BUSY_MESSAGE, suggestBudget } from "@/lib/mock/ai";
+import { AI_BUSY_MESSAGE } from "@/lib/ai-messages";
 import type { ActionResult, MonthData, MonthPlan } from "@/lib/types";
 import { centsToInput, type DisplayCurrency } from "@/lib/money";
+import { suggestBudgetAction } from "@/server/actions/ai";
 import {
   clearBudgetsAction,
   replaceBudgetsAction,
@@ -124,23 +125,11 @@ export function BudgetPlanner({ monthKey, nextKey, month, plan, currency }: Budg
     if (aiBusy) return;
     setAiBusy(true);
     try {
-      const result = await suggestBudget({ actuals, expectedCents: liveExpectedCents, nextKey });
+      // The server reads this month and next month's expected income itself, then saves
+      // the budgets and AI note; the month layout re-renders with them.
+      const result = await mutate(null, () => suggestBudgetAction(monthKey));
       if (!result.ok) {
         toast(result.message || AI_BUSY_MESSAGE);
-        return;
-      }
-      // Keep exact category names only.
-      const budgets: Record<string, number> = {};
-      for (const category of categories) {
-        const cents = result.data.budgets[category];
-        if (typeof cents === "number" && Number.isFinite(cents) && cents >= 0) budgets[category] = Math.round(cents);
-      }
-      const note = result.data.note;
-      const saved = await mutate({ kind: "replaceBudgets", budgets, aiNote: note }, () =>
-        replaceBudgetsAction(nextKey, budgets, note),
-      );
-      if (!saved.ok) {
-        toast(saved.message);
         return;
       }
       setDrafts({});

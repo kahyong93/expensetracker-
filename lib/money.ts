@@ -79,6 +79,15 @@ export function inputToCents(raw: string, currency: DisplayCurrency = BASE_CURRE
   return Math.round((value / currency.rate) * 100);
 }
 
+/**
+ * SGD cents for a number in the display currency (AI replies), with the same rule as
+ * typed input. Null for anything that isn't a finite, non-negative number.
+ */
+export function displayToCents(value: unknown, currency: DisplayCurrency): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return null;
+  return Math.round((value / currency.rate) * 100);
+}
+
 /** A stored amount and the text it was pre-filled into an input as. */
 export type PrefilledAmount = { input: string; cents: number };
 

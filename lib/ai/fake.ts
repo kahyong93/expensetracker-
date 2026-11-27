@@ -60,6 +60,16 @@ const FAKE_TIPS = {
   ],
 };
 
+/** AI-4: 100 (display currency) for every category the form lists. */
+function fakeBudget(schema: JsonSchema): { budgets: Record<string, number>; note: string } {
+  const form = schema.properties.budgets as { properties?: Record<string, unknown> } | undefined;
+  const categories = Object.keys(form?.properties ?? {});
+  return {
+    budgets: Object.fromEntries(categories.map((c) => [c, 100])),
+    note: 'I set every category to 100 to keep next month simple.',
+  };
+}
+
 /** AI-2: echoes the question so tests can tell replies apart. */
 export async function fakeComplete(request: AiRequest): Promise<string> {
   await wait(DELAY_MS);
@@ -78,6 +88,8 @@ export async function fakeCompleteJson(request: AiRequest & { schema: JsonSchema
       return FAKE_ALERTS;
     case 'tips':
       return FAKE_TIPS;
+    case 'budget':
+      return fakeBudget(request.schema);
     default:
       return null;
   }

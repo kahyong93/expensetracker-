@@ -45,25 +45,6 @@ export async function suggestCategory(input: {
   return respond({ category: proposed });
 }
 
-// AI-4 Smart budget -----------------------------------------------------------
-
-export async function suggestBudget(input: {
-  /** Expense category → this month's actual, in SGD cents. */
-  actuals: Record<string, number>;
-  expectedCents: number;
-  nextKey: string;
-}): Promise<ActionResult<{ budgets: Record<string, number>; note: string }>> {
-  const budgets: Record<string, number> = {};
-  for (const [category, cents] of Object.entries(input.actuals)) {
-    // Treat very large one-offs as non-recurring; trim the rest by ~5%.
-    budgets[category] = cents > 200000 ? Math.round(cents * 0.15) : Math.round(cents * 0.95);
-  }
-  return respond({
-    budgets,
-    note: `I treated the large insurance payment as a one-off and trimmed the rest slightly, leaving more room to save in ${input.nextKey}.`,
-  });
-}
-
 // AI-6 Paste to add -----------------------------------------------------------
 
 export type ParsedRow = {

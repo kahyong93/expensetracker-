@@ -59,7 +59,7 @@ Columns: **Max tokens** is the answer cap from CLAUDE.md §7. **Saves** says wha
 - **UI:** `components/ai/insight-card.tsx`, which shows the saved card from Server Component props after revalidation.
 - **Build order:** one step per kind (summary, then alerts, then tips). The action is shared, so alerts and tips mostly add a prompt and a fake reply.
 
-### AI-4 Smart budget suggestions
+### AI-4 Smart budget suggestions ✅ built
 - **Action:** `suggestBudgetAction(monthKey)` → `{ budgets: Record<string, number /* SGD cents */>, note }`
 - **Prompt:** reference `suggestBudget`. Next month is `nextOf(monthKey)`. Expected income is next month's plan if set, otherwise this month's income total, shown in the display currency.
 - **Schema:** built per request. `budgets` is an object with one required number property per expense category, plus `note: string`. **Max tokens:** 600.
@@ -88,7 +88,7 @@ Each step is built, checked (typecheck, lint, unit tests, E2E) and committed on 
 | 3 | AI-3 Monthly summary | ✅ built |
 | 4 | AI-5 Spending alerts | ✅ built |
 | 5 | AI-7 Savings tips | ✅ built |
-| 6 | AI-4 Smart budget | ⏳ |
+| 6 | AI-4 Smart budget | ✅ built |
 | 7 | AI-6 Paste to add, then delete `lib/mock/ai.ts` | ⏳ |
 
 ## 4. Tests
