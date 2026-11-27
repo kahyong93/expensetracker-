@@ -529,6 +529,29 @@ test('X2/X1: reset to sample data, PRD sample totals, CSV export', async () => {
   expect(lines.length).toBeGreaterThanOrEqual(1 + 73);
 });
 
+// Runs on the sample month (Jan-25) so later tests keep this month's totals.
+test('AI-6: paste to add previews rows, saves nothing until confirmed, then adds the kept rows', async () => {
+  const before = await entriesOf(ids.a, 'Jan-25');
+  await nav(/AI helper/).click();
+  const card = page.getByRole('region', { name: 'Paste to add' });
+  await card.getByRole('button', { name: 'Read it' }).click();
+  await toast(page, 'Paste some text first');
+
+  await card.getByRole('textbox').fill('DBS: You paid SGD 12.50 to GRAB on 03 Feb. Kopi 1.80, vet visit 45');
+  await card.getByRole('button', { name: 'Read it' }).click();
+  await expect(card.getByRole('listitem')).toHaveCount(3);
+  expect(await entriesOf(ids.a, 'Jan-25')).toHaveLength(before.length); // nothing saved yet
+
+  await card.getByRole('button', { name: 'Remove Kopi' }).click();
+  await card.getByRole('button', { name: 'Add 2 entries to Jan-25' }).click();
+  await toast(page, 'Added 2 entries');
+
+  await expect.poll(async () => (await entriesOf(ids.a, 'Jan-25')).length).toBe(before.length + 2);
+  const after = await entriesOf(ids.a, 'Jan-25');
+  expect(after.find((e) => e.label === 'Vet visit')).toMatchObject({ category: 'Pets', cents: 4500, type: 'Out' });
+  expect(after.filter((e) => e.label === 'Grab' && e.note === '03 Feb')).toHaveLength(1 + before.filter((e) => e.label === 'Grab' && e.note === '03 Feb').length);
+});
+
 test('A1: data persists after signing out and back in', async () => {
   await clerk.signOut({ page });
   await page.goto(`/m/${THIS}`);

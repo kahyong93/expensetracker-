@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { CURRENCIES } from '@/lib/money';
 import type { MonthData } from '@/lib/types';
-import { parseBudgetReply, parseCategoryReply, parseInsightReply } from './parse';
-import { budgetPrompt, categorisePrompt, chatMessages, insightPrompt, monthContext, systemPrompt } from './prompts';
+import { LIMITS } from '@/lib/validation';
+import { parseBudgetReply, parseCategoryReply, parseInsightReply, parsePasteReply } from './parse';
+import { budgetPrompt, categorisePrompt, chatMessages, insightPrompt, monthContext, pastePrompt, systemPrompt } from './prompts';
 import { budgetSchema } from './schemas';
 import { createRateLimiter } from './rate-limit';
 
@@ -197,5 +198,52 @@ describe('smart budget (AI-4)', () => {
     expect(parseBudgetReply({ budgets: { Food: -5 }, note: 'x' }, cats, SGD)).toBeNull();
     expect(parseBudgetReply({ budgets: { Food: 5 }, note: 42 }, cats, SGD)).toBeNull();
     expect(parseBudgetReply({ budgets: 'nope', note: 'x' }, cats, SGD)).toBeNull();
+  });
+});
+
+describe('paste to add (AI-6)', () => {
+  const cats = { Out: ['Food', 'Transport'], In: ['Work'] };
+  const row = (over: Record<string, unknown> = {}) => ({ type: 'Out', category: 'food', label: 'Kopi', amount: 0.9, note: '', ...over });
+
+  it('uses the reference paste task, asking for an object with an entries array', () => {
+    expect(pastePrompt({ categories: cats, currency: USD, text: 'Kopi 1.80' })).toBe(
+      'Extract every money entry from the text below. Expense categories: Food, Transport. Income categories: Work. Use an existing category when it fits, otherwise a short new one. Amounts as plain numbers in USD.' +
+        '\nReturn a JSON object: {"entries": [{"type": "Out" or "In", "category": string, "label": short merchant or source, "amount": number, "note": short string or ""}]}' +
+        '\n\nText:\nKopi 1.80',
+    );
+  });
+
+  it('matches existing categories by type, converts amounts to SGD cents, and keeps new categories', () => {
+    expect(
+      parsePasteReply({ entries: [row(), row({ type: 'In', category: 'Bonus', label: 'Year-end', amount: 50, note: 'Dec' })] }, cats, USD),
+    ).toEqual([
+      { type: 'Out', category: 'Food', label: 'Kopi', amountCents: 180, note: '' },
+      { type: 'In', category: 'Bonus', label: 'Year-end', amountCents: 10000, note: 'Dec' },
+    ]);
+  });
+
+  it('drops bad rows and trims an over-long note', () => {
+    const rows = parsePasteReply(
+      {
+        entries: [
+          row({ type: 'Sideways' }),
+          row({ label: '' }),
+          row({ label: 'x'.repeat(LIMITS.label + 1) }),
+          row({ amount: 0 }),
+          row({ amount: -3 }),
+          row({ category: '' }),
+          row({ note: 'n'.repeat(LIMITS.note + 10) }),
+        ],
+      },
+      cats,
+      SGD,
+    );
+    expect(rows).toEqual([{ type: 'Out', category: 'Food', label: 'Kopi', amountCents: 90, note: 'n'.repeat(LIMITS.note) }]);
+  });
+
+  it('keeps at most 200 rows and rejects a bad shape', () => {
+    expect(parsePasteReply({ entries: Array.from({ length: 250 }, () => row()) }, cats, SGD)).toHaveLength(200);
+    expect(parsePasteReply({ entries: 'nope' }, cats, SGD)).toBeNull();
+    expect(parsePasteReply([row()], cats, SGD)).toBeNull();
   });
 });

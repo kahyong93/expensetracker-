@@ -8,13 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Card, SectionTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
-import { AI_BUSY_MESSAGE, PASTE_MAX_CHARS, parsePaste, type ParsedRow } from "@/lib/mock/ai";
+import { AI_BUSY_MESSAGE, PASTE_EMPTY_MESSAGE, PASTE_MAX_CHARS } from "@/lib/ai-messages";
 import type { EntryInput } from "@/lib/types";
 import type { DisplayCurrency } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { parsePasteAction } from "@/server/actions/ai";
 import { addEntriesAction } from "@/server/actions/entries";
 
-type PreviewRow = ParsedRow & { key: number };
+type PreviewRow = EntryInput & { key: number };
 
 type PasteToAddProps = {
   monthKey: string;
@@ -49,21 +50,18 @@ export function PasteToAdd({ monthKey, currency }: PasteToAddProps) {
     if (busy) return;
     const trimmed = text.trim();
     if (!trimmed) {
-      toast("Paste some text first");
+      toast(PASTE_EMPTY_MESSAGE);
       return;
     }
     setBusy(true);
     try {
-      const result = await parsePaste({ text: trimmed });
+      // The server checks every row; "No entries found in that text" comes back as an error.
+      const result = await parsePasteAction(monthKey, trimmed);
       if (!result.ok) {
         toast(result.message);
         return;
       }
-      const found = result.data.filter((row) => row.label.trim() !== "" && Number.isFinite(row.amountCents));
-      if (found.length === 0) {
-        toast("No entries found in that text");
-        return;
-      }
+      const found = result.data;
       const base = nextKey.current;
       nextKey.current += found.length;
       setRows(found.map((row, i) => ({ ...row, key: base + i })));

@@ -67,7 +67,7 @@ Columns: **Max tokens** is the answer cap from CLAUDE.md §7. **Saves** says wha
 - **Saves:** `data/plans.replaceBudgets(nextKey, budgets, note)`. Revalidates. Toast "AI budget filled in. Edit any number."
 - **UI:** `components/budget/budget-planner.tsx`. It no longer sends `actuals` or `expectedCents`.
 
-### AI-6 Paste to add
+### AI-6 Paste to add ✅ built
 - **Action:** `parsePasteAction(monthKey, text)` → `ParsedRow[]` (`{ type, category, label, amountCents, note }`)
 - **Input:** text trimmed, 1–4,000 chars. Over the limit gives the existing "Paste up to 4,000 characters" message. Empty text is blocked in the UI with "Paste some text first".
 - **Prompt:** reference `runPaste`, with amounts in the display currency code. The shape line asks for `{"entries": [...]}`, because OpenAI needs an object at the root.
@@ -89,7 +89,8 @@ Each step is built, checked (typecheck, lint, unit tests, E2E) and committed on 
 | 4 | AI-5 Spending alerts | ✅ built |
 | 5 | AI-7 Savings tips | ✅ built |
 | 6 | AI-4 Smart budget | ✅ built |
-| 7 | AI-6 Paste to add, then delete `lib/mock/ai.ts` | ⏳ |
+| 7 | AI-6 Paste to add | ✅ built |
+| 8 | Delete `lib/mock/ai.ts` | ⏳ |
 
 ## 4. Tests
 

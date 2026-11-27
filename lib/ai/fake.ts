@@ -60,6 +60,16 @@ const FAKE_TIPS = {
   ],
 };
 
+/** AI-6: three usable rows (one in a new category) and one the reply check drops. */
+const FAKE_PASTE = {
+  entries: [
+    { type: 'Out', category: 'Transport', label: 'Grab', amount: 12.5, note: '03 Feb' },
+    { type: 'Out', category: 'Food', label: 'Kopi', amount: 1.8, note: '' },
+    { type: 'Out', category: 'Pets', label: 'Vet visit', amount: 45, note: '' },
+    { type: 'Out', category: 'Food', label: '', amount: 3, note: '' },
+  ],
+};
+
 /** AI-4: 100 (display currency) for every category the form lists. */
 function fakeBudget(schema: JsonSchema): { budgets: Record<string, number>; note: string } {
   const form = schema.properties.budgets as { properties?: Record<string, unknown> } | undefined;
@@ -90,6 +100,8 @@ export async function fakeCompleteJson(request: AiRequest & { schema: JsonSchema
       return FAKE_TIPS;
     case 'budget':
       return fakeBudget(request.schema);
+    case 'paste':
+      return FAKE_PASTE;
     default:
       return null;
   }

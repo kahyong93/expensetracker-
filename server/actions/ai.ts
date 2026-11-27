@@ -7,14 +7,24 @@ import {
   parseBudgetReply,
   parseCategoryReply,
   parseInsightReply,
+  parsePasteReply,
   type BudgetSuggestion,
   type CategorySuggestion,
 } from '@/lib/ai/parse';
-import { budgetPrompt, categorisePrompt, chatMessages, insightPrompt, monthContext, systemPrompt } from '@/lib/ai/prompts';
-import { CATEGORY_SCHEMA, INSIGHT_SCHEMA, budgetSchema } from '@/lib/ai/schemas';
+import {
+  budgetPrompt,
+  categorisePrompt,
+  chatMessages,
+  insightPrompt,
+  monthContext,
+  pastePrompt,
+  systemPrompt,
+} from '@/lib/ai/prompts';
+import { CATEGORY_SCHEMA, INSIGHT_SCHEMA, PASTE_SCHEMA, budgetSchema } from '@/lib/ai/schemas';
+import { PASTE_EMPTY_MESSAGE, PASTE_MAX_CHARS, PASTE_NO_ENTRIES_MESSAGE, PASTE_TOO_LONG_MESSAGE } from '@/lib/ai-messages';
 import { categoriesOf, monthTotals } from '@/lib/calc';
 import { nextOf } from '@/lib/months';
-import type { ActionResult, ChatTurn, EntryType, Insight, InsightKind } from '@/lib/types';
+import type { ActionResult, ChatTurn, EntryInput, EntryType, Insight, InsightKind } from '@/lib/types';
 import { LIMITS, parseChatMessages, parseEntryType, parseInsightKind, parseMonthLabel } from '@/lib/validation';
 import { INVALID } from './run-action';
 import { AI_BAD_REPLY, MONTH_MISSING, loadAiMonth, runAi } from './run-ai';
@@ -128,6 +138,37 @@ export async function suggestBudgetAction(monthKey: string): Promise<ActionResul
     },
     { revalidate: true },
   );
+}
+
+/**
+ * AI-6 Paste to add: extracts preview rows from pasted text. Saves nothing; the user
+ * confirms in the UI, which then calls addEntriesAction.
+ */
+export async function parsePasteAction(monthKey: string, text: string): Promise<ActionResult<EntryInput[]>> {
+  return runAi(async () => {
+    const key = parseMonthLabel(monthKey);
+    if (!key || typeof text !== 'string') return INVALID;
+    const trimmed = text.trim();
+    if (!trimmed) return { ok: false, code: 'paste_empty', message: PASTE_EMPTY_MESSAGE };
+    if (trimmed.length > PASTE_MAX_CHARS) return { ok: false, code: 'paste_too_long', message: PASTE_TOO_LONG_MESSAGE };
+
+    const loaded = await loadAiMonth(key);
+    if (!loaded) return MONTH_MISSING;
+    const { bundle, currency } = loaded;
+    const categories = { Out: categoriesOf(bundle.month, 'Out'), In: categoriesOf(bundle.month, 'In') };
+
+    const reply = await completeJson({
+      task: 'paste',
+      system: systemPrompt(currency, true),
+      messages: [{ role: 'user', content: pastePrompt({ categories, currency, text: trimmed }) }],
+      maxTokens: 1500,
+      schema: PASTE_SCHEMA,
+    });
+    const rows = parsePasteReply(reply, categories, currency);
+    if (!rows) return AI_BAD_REPLY;
+    if (rows.length === 0) return { ok: false, code: 'paste_no_entries', message: PASTE_NO_ENTRIES_MESSAGE };
+    return { ok: true, data: rows };
+  });
 }
 
 /** AI-1 Auto-categorise. */

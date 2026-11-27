@@ -1,7 +1,14 @@
 import 'server-only';
-import type { Insight, InsightKind } from '@/lib/types';
+import type { EntryInput, EntryType, Insight, InsightKind } from '@/lib/types';
 import { displayToCents, type DisplayCurrency } from '@/lib/money';
-import { LIMITS, parseAiNote, parseCategoryName, parseInsight } from '@/lib/validation';
+import {
+  LIMITS,
+  MAX_ENTRIES_PER_REQUEST,
+  parseAiNote,
+  parseCategoryName,
+  parseEntryType,
+  parseInsight,
+} from '@/lib/validation';
 
 /**
  * App-level checks on structured AI replies (CLAUDE.md §7). The schema already fixes the
@@ -67,4 +74,37 @@ export function parseBudgetReply(
     if (cents != null && cents <= LIMITS.maxAmountCents) budgets[category] = cents;
   }
   return Object.keys(budgets).length > 0 ? { budgets, note } : null;
+}
+
+function trimmedString(value: unknown): string | null {
+  return typeof value === 'string' ? value.trim() : null;
+}
+
+/**
+ * AI-6: preview rows from the paste reply. Each row needs a valid type, category and label
+ * and an amount > 0 (display currency → SGD cents); an existing category of that type is
+ * matched case-insensitively. Bad rows are dropped, an over-long note is cut, and at most
+ * MAX_ENTRIES_PER_REQUEST rows are kept. Null when the reply has the wrong shape.
+ */
+export function parsePasteReply(
+  value: unknown,
+  categories: Record<EntryType, readonly string[]>,
+  currency: DisplayCurrency,
+): EntryInput[] | null {
+  if (!isRecord(value) || !Array.isArray(value.entries)) return null;
+  const rows: EntryInput[] = [];
+  for (const item of value.entries) {
+    if (rows.length >= MAX_ENTRIES_PER_REQUEST) break;
+    if (!isRecord(item)) continue;
+    const type = parseEntryType(item.type);
+    const name = parseCategoryName(item.category);
+    const label = trimmedString(item.label);
+    const amountCents = displayToCents(item.amount, currency);
+    if (!type || !name || !label || label.length > LIMITS.label) continue;
+    if (amountCents == null || amountCents <= 0 || amountCents > LIMITS.maxAmountCents) continue;
+    const category = categories[type].find((c) => c.toLowerCase() === name.toLowerCase()) ?? name;
+    const note = (trimmedString(item.note) ?? '').slice(0, LIMITS.note);
+    rows.push({ type, category, label, amountCents, note });
+  }
+  return rows;
 }

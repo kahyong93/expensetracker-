@@ -86,6 +86,24 @@ export function budgetPrompt(input: {
   );
 }
 
+/**
+ * AI-6 (reference `runPaste`). The one change from the reference: OpenAI structured output
+ * needs an object at the root, so the shape line asks for `{"entries": [...]}`.
+ */
+export function pastePrompt(input: {
+  categories: Record<EntryType, readonly string[]>;
+  currency: DisplayCurrency;
+  text: string;
+}): string {
+  return (
+    'Extract every money entry from the text below. Expense categories: ' + input.categories.Out.join(', ') +
+    '. Income categories: ' + input.categories.In.join(', ') +
+    '. Use an existing category when it fits, otherwise a short new one. Amounts as plain numbers in ' + input.currency.code + '.' +
+    '\nReturn a JSON object: {"entries": [{"type": "Out" or "In", "category": string, "label": short merchant or source, "amount": number, "note": short string or ""}]}' +
+    '\n\nText:\n' + input.text
+  );
+}
+
 /** AI-1 (reference `suggestCat`). */
 export function categorisePrompt(input: {
   type: EntryType;

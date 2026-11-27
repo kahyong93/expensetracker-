@@ -7,7 +7,6 @@
  */
 import type { ActionResult, EntryType } from "@/lib/types";
 
-import { PASTE_MAX_CHARS } from "@/lib/ai-messages";
 
 export { AI_BAD_REPLY_MESSAGE, AI_BUSY_MESSAGE, PASTE_MAX_CHARS } from "@/lib/ai-messages";
 
@@ -43,27 +42,4 @@ export async function suggestCategory(input: {
   const hint = CATEGORY_HINTS.find((h) => h.words.some((w) => label.includes(w)));
   const proposed = hint?.category ?? (input.type === "Out" ? "Misc" : "Other income");
   return respond({ category: proposed });
-}
-
-// AI-6 Paste to add -----------------------------------------------------------
-
-export type ParsedRow = {
-  type: EntryType;
-  category: string;
-  label: string;
-  /** SGD cents. */
-  amountCents: number;
-  note: string;
-};
-
-export async function parsePaste(input: { text: string }): Promise<ActionResult<ParsedRow[]>> {
-  if (input.text.length > PASTE_MAX_CHARS) {
-    await wait(DELAY_MS);
-    return { ok: false, code: "too_long", message: `Paste up to ${PASTE_MAX_CHARS.toLocaleString("en-US")} characters` };
-  }
-  return respond<ParsedRow[]>([
-    { type: "Out", category: "Transport", label: "Grab", amountCents: 1250, note: "03 Feb" },
-    { type: "Out", category: "Food", label: "Kopi", amountCents: 180, note: "" },
-    { type: "Out", category: "Food", label: "Chicken rice", amountCents: 450, note: "" },
-  ]);
 }

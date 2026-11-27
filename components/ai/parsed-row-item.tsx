@@ -2,18 +2,18 @@
 
 import { useLayoutMode } from "@/components/providers/layout-mode-provider";
 import { Tag } from "@/components/ui/tag";
-import type { ParsedRow } from "@/lib/mock/ai";
 import { formatMoney, type DisplayCurrency } from "@/lib/money";
+import type { EntryInput } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type ParsedRowItemProps = {
-  row: ParsedRow;
+  row: EntryInput;
   currency: DisplayCurrency;
   onRemove: () => void;
 };
 
 /** Preview amount: income gets a leading "+" (PRD AI-6). */
-function previewAmount(row: ParsedRow, currency: DisplayCurrency): string {
+function previewAmount(row: EntryInput, currency: DisplayCurrency): string {
   return `${row.type === "In" ? "+" : ""}${formatMoney(row.amountCents, currency)}`;
 }
 

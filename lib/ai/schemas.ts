@@ -53,3 +53,28 @@ export function budgetSchema(categories: readonly string[]): JsonSchema {
     additionalProperties: false,
   };
 }
+
+/** AI-6: `{ entries: [{ type, category, label, amount, note }] }`. */
+export const PASTE_SCHEMA: JsonSchema = {
+  title: 'paste_reply',
+  type: 'object',
+  properties: {
+    entries: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          type: { type: 'string', enum: ['Out', 'In'] },
+          category: { type: 'string' },
+          label: { type: 'string' },
+          amount: { type: 'number' },
+          note: { type: 'string' },
+        },
+        required: ['type', 'category', 'label', 'amount', 'note'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['entries'],
+  additionalProperties: false,
+};
