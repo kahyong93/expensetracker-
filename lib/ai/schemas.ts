@@ -14,3 +14,23 @@ export const CATEGORY_SCHEMA: JsonSchema = {
   required: ['category'],
   additionalProperties: false,
 };
+
+/** AI-3/5/7: `{ headline, points: [{ title, text }] }`. */
+export const INSIGHT_SCHEMA: JsonSchema = {
+  title: 'insight_reply',
+  type: 'object',
+  properties: {
+    headline: { type: 'string' },
+    points: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { title: { type: 'string' }, text: { type: 'string' } },
+        required: ['title', 'text'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['headline', 'points'],
+  additionalProperties: false,
+};

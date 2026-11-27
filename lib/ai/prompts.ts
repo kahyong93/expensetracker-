@@ -1,7 +1,7 @@
 import 'server-only';
 import { categoriesOf } from '@/lib/calc';
 import type { DisplayCurrency } from '@/lib/money';
-import type { EntryType, MonthData } from '@/lib/types';
+import type { EntryType, InsightKind, MonthData } from '@/lib/types';
 import type { AiMessage } from './types';
 
 /**
@@ -49,6 +49,21 @@ export function chatMessages(context: string, history: readonly AiMessage[]): Ai
     { role: 'assistant', content: 'Got it. What would you like to know?' },
     ...history,
   ];
+}
+
+/** Reference `runInsight` task lines. A kind is added here when its feature is built. */
+const INSIGHT_TASKS: Partial<Record<InsightKind, string>> = {
+  summary:
+    'Write a friendly monthly summary with 3 points: the biggest spending driver, the savings result, and one notable pattern.',
+};
+
+const INSIGHT_SHAPE =
+  'JSON shape: {"headline": one sentence, "points": [{"title": short, "text": one or two sentences}]}';
+
+/** AI-3/5/7 (reference `runInsight`). Null for a kind that isn't built yet. */
+export function insightPrompt(context: string, kind: InsightKind): string | null {
+  const task = INSIGHT_TASKS[kind];
+  return task ? context + '\n\nTask: ' + task + '\n' + INSIGHT_SHAPE : null;
 }
 
 /** AI-1 (reference `suggestCat`). */

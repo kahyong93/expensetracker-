@@ -277,6 +277,25 @@ test('AI-2: ask your money answers a starter question and a follow-up; Clear res
   await nav(/^Expenses/).click(); // later tests start from the expenses board
 });
 
+test('AI-3: monthly summary is generated, saved for the month, and refreshed', async () => {
+  await nav(/AI helper/).click();
+  const card = page.getByRole('region', { name: 'Monthly summary' });
+  await card.getByRole('button', { name: 'Generate' }).click();
+  await expect(card).toContainText('A steady month with money left over.');
+  await expect(card.getByRole('button', { name: 'Refresh' })).toBeVisible();
+
+  const saved = async () => (await snapshot(ids.a)).months.find((m) => m.key === THIS)?.aiInsights.find((i) => i.kind === 'summary');
+  await expect.poll(async () => (await saved())?.payload).toMatchObject({ headline: 'A steady month with money left over.' });
+  const firstAt = (await saved())!.generatedAt.getTime();
+
+  await page.reload();
+  await expect(card).toContainText('A steady month with money left over.');
+  await card.getByRole('button', { name: 'Refresh' }).click();
+  await expect.poll(async () => (await saved())!.generatedAt.getTime()).toBeGreaterThan(firstAt);
+
+  await nav(/^Expenses/).click();
+});
+
 test('G5/S1: currency switch converts every amount; rates are saved; input converts back to SGD', async () => {
   // SGD state: Earned 3000.00, Spent 15.00 + 6.40 = 21.40
   await expectTotals('S$3,000.00', 'S$21.40', 'S$2,978.60');

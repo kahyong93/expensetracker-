@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { CURRENCIES } from '@/lib/money';
 import type { MonthData } from '@/lib/types';
-import { parseCategoryReply } from './parse';
-import { categorisePrompt, chatMessages, monthContext, systemPrompt } from './prompts';
+import { parseCategoryReply, parseInsightReply } from './parse';
+import { categorisePrompt, chatMessages, insightPrompt, monthContext, systemPrompt } from './prompts';
 import { createRateLimiter } from './rate-limit';
 
 const SGD = CURRENCIES[0];
@@ -96,5 +96,31 @@ describe('chatMessages', () => {
       { role: 'assistant', content: 'Got it. What would you like to know?' },
       ...history,
     ]);
+  });
+});
+
+describe('insightPrompt', () => {
+  it('adds the reference summary task and JSON shape to the month context', () => {
+    expect(insightPrompt('CTX', 'summary')).toBe(
+      'CTX\n\nTask: Write a friendly monthly summary with 3 points: the biggest spending driver, the savings result, and one notable pattern.' +
+        '\nJSON shape: {"headline": one sentence, "points": [{"title": short, "text": one or two sentences}]}',
+    );
+  });
+});
+
+describe('parseInsightReply', () => {
+  const point = (n: number) => ({ title: `T${n}`, text: `Text ${n}` });
+  const reply = (count: number) => ({ headline: 'A good month.', points: Array.from({ length: count }, (_, i) => point(i + 1)) });
+
+  it('accepts a summary with exactly 3 points and cuts extras', () => {
+    expect(parseInsightReply(reply(3), 'summary')).toEqual(reply(3));
+    expect(parseInsightReply(reply(5), 'summary')).toEqual(reply(3));
+  });
+
+  it('rejects a summary with too few points or a bad shape', () => {
+    expect(parseInsightReply(reply(2), 'summary')).toBeNull();
+    expect(parseInsightReply({ headline: '', points: [point(1), point(2), point(3)] }, 'summary')).toBeNull();
+    expect(parseInsightReply({ headline: 'x', points: 'nope' }, 'summary')).toBeNull();
+    expect(parseInsightReply(null, 'summary')).toBeNull();
   });
 });

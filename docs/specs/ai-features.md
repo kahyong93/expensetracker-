@@ -85,7 +85,7 @@ Each step is built, checked (typecheck, lint, unit tests, E2E) and committed on 
 | 0 | Shared setup (§1) | ✅ built |
 | 1 | AI-1 Auto-categorise | ✅ built |
 | 2 | AI-2 Ask your money | ✅ built |
-| 3 | AI-3 Monthly summary | ⏳ |
+| 3 | AI-3 Monthly summary | ✅ built |
 | 4 | AI-5 Spending alerts | ⏳ |
 | 5 | AI-7 Savings tips | ⏳ |
 | 6 | AI-4 Smart budget | ⏳ |

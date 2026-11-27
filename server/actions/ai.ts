@@ -1,12 +1,13 @@
 'use server';
 
+import * as insightsData from '@/data/insights';
 import { complete, completeJson } from '@/lib/ai/client';
-import { parseCategoryReply, type CategorySuggestion } from '@/lib/ai/parse';
-import { categorisePrompt, chatMessages, monthContext, systemPrompt } from '@/lib/ai/prompts';
-import { CATEGORY_SCHEMA } from '@/lib/ai/schemas';
+import { parseCategoryReply, parseInsightReply, type CategorySuggestion } from '@/lib/ai/parse';
+import { categorisePrompt, chatMessages, insightPrompt, monthContext, systemPrompt } from '@/lib/ai/prompts';
+import { CATEGORY_SCHEMA, INSIGHT_SCHEMA } from '@/lib/ai/schemas';
 import { categoriesOf } from '@/lib/calc';
-import type { ActionResult, ChatTurn, EntryType } from '@/lib/types';
-import { LIMITS, parseChatMessages, parseEntryType, parseMonthLabel } from '@/lib/validation';
+import type { ActionResult, ChatTurn, EntryType, Insight, InsightKind } from '@/lib/types';
+import { LIMITS, parseChatMessages, parseEntryType, parseInsightKind, parseMonthLabel } from '@/lib/validation';
 import { INVALID } from './run-action';
 import { AI_BAD_REPLY, MONTH_MISSING, loadAiMonth, runAi } from './run-ai';
 
@@ -41,6 +42,40 @@ export async function askMoneyAction(monthKey: string, messages: ChatTurn[]): Pr
     // Capped so the reply still passes validation when it comes back as chat history.
     return reply ? { ok: true, data: reply.slice(0, LIMITS.chatReply) } : AI_BAD_REPLY;
   });
+}
+
+/**
+ * AI-3/5/7 insight cards: generates the card from the user's month and saves it for that
+ * month, replacing any earlier one ("Refresh").
+ */
+export async function generateInsightAction(monthKey: string, kind: InsightKind): Promise<ActionResult<Insight>> {
+  return runAi(
+    async () => {
+      const key = parseMonthLabel(monthKey);
+      const k = parseInsightKind(kind);
+      if (!key || !k) return INVALID;
+
+      const loaded = await loadAiMonth(key);
+      if (!loaded) return MONTH_MISSING;
+      const { bundle, currency } = loaded;
+      const prompt = insightPrompt(monthContext(bundle.month, bundle.budgets, currency), k);
+      if (!prompt) return INVALID;
+
+      const reply = await completeJson({
+        task: k,
+        system: systemPrompt(currency, true),
+        messages: [{ role: 'user', content: prompt }],
+        maxTokens: 900,
+        schema: INSIGHT_SCHEMA,
+      });
+      const insight = parseInsightReply(reply, k);
+      if (!insight) return AI_BAD_REPLY;
+
+      const saved = await insightsData.saveInsight(key, k, insight);
+      return saved.ok ? { ok: true, data: insight } : saved;
+    },
+    { revalidate: true },
+  );
 }
 
 /** AI-1 Auto-categorise. */

@@ -34,6 +34,15 @@ function fakeCategory(prompt: string): { category: string } {
   return { category: hint?.category ?? (isExpense ? 'Misc' : 'Other income') };
 }
 
+const FAKE_SUMMARY = {
+  headline: 'A steady month with money left over.',
+  points: [
+    { title: 'Biggest driver', text: 'Food was your largest expense category.' },
+    { title: 'Savings result', text: 'You kept most of what you earned.' },
+    { title: 'Notable pattern', text: 'Small coffee purchases came up more than once.' },
+  ],
+};
+
 /** AI-2: echoes the question so tests can tell replies apart. */
 export async function fakeComplete(request: AiRequest): Promise<string> {
   await wait(DELAY_MS);
@@ -46,6 +55,8 @@ export async function fakeCompleteJson(request: AiRequest & { schema: JsonSchema
   switch (request.task) {
     case 'categorise':
       return fakeCategory(prompt);
+    case 'summary':
+      return FAKE_SUMMARY;
     default:
       return null;
   }
