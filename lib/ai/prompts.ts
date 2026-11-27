@@ -51,21 +51,21 @@ export function chatMessages(context: string, history: readonly AiMessage[]): Ai
   ];
 }
 
-/** Reference `runInsight` task lines. A kind is added here when its feature is built. */
-const INSIGHT_TASKS: Partial<Record<InsightKind, string>> = {
+/** Reference `runInsight` task lines. */
+const INSIGHT_TASKS: Record<InsightKind, string> = {
   summary:
     'Write a friendly monthly summary with 3 points: the biggest spending driver, the savings result, and one notable pattern.',
   alerts:
     'Find 2-4 unusual or noteworthy spending items: one-off large payments, repeated small spends that add up, or categories over budget.',
+  tips: 'Give 3 practical savings tips tied to specific merchants or categories in the data, each with an estimated monthly saving.',
 };
 
 const INSIGHT_SHAPE =
   'JSON shape: {"headline": one sentence, "points": [{"title": short, "text": one or two sentences}]}';
 
-/** AI-3/5/7 (reference `runInsight`). Null for a kind that isn't built yet. */
-export function insightPrompt(context: string, kind: InsightKind): string | null {
-  const task = INSIGHT_TASKS[kind];
-  return task ? context + '\n\nTask: ' + task + '\n' + INSIGHT_SHAPE : null;
+/** AI-3/5/7 (reference `runInsight`). */
+export function insightPrompt(context: string, kind: InsightKind): string {
+  return context + '\n\nTask: ' + INSIGHT_TASKS[kind] + '\n' + INSIGHT_SHAPE;
 }
 
 /** AI-1 (reference `suggestCat`). */

@@ -28,15 +28,16 @@ export function parseCategoryReply(value: unknown, categories: readonly string[]
 }
 
 /** How many points each insight card needs (PRD AI-3/5/7). Extra points are cut. */
-const INSIGHT_POINTS: Partial<Record<InsightKind, { min: number; max: number }>> = {
+const INSIGHT_POINTS: Record<InsightKind, { min: number; max: number }> = {
   summary: { min: 3, max: 3 },
   alerts: { min: 2, max: 4 },
+  tips: { min: 3, max: 3 },
 };
 
 /** AI-3/5/7: the stored insight shape, with the kind's point count. */
 export function parseInsightReply(value: unknown, kind: InsightKind): Insight | null {
   const rule = INSIGHT_POINTS[kind];
-  if (!rule || !isRecord(value) || !Array.isArray(value.points)) return null;
+  if (!isRecord(value) || !Array.isArray(value.points)) return null;
   const insight = parseInsight({ headline: value.headline, points: value.points.slice(0, rule.max) });
   return insight && insight.points.length >= rule.min ? insight : null;
 }

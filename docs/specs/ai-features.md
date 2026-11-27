@@ -50,7 +50,7 @@ Columns: **Max tokens** is the answer cap from CLAUDE.md §7. **Saves** says wha
 - **Output:** plain text, trimmed. An empty reply is `ai_bad_reply`. **Max tokens:** 600. **Saves:** nothing.
 - **UI:** `components/ai/ask-money-chat.tsx`.
 
-### AI-3 Monthly summary · AI-5 Spending alerts · AI-7 Savings tips
+### AI-3 Monthly summary · AI-5 Spending alerts · AI-7 Savings tips ✅ built
 - **Action:** `generateInsightAction(monthKey, kind)` → `Insight`, where `kind` is `summary`, `alerts` or `tips`. The fake uses the kind as its task name.
 - **Prompt:** reference `runInsight`: context + `Task:` line for the kind + the JSON shape line.
 - **Schema:** `{ headline: string, points: [{ title: string, text: string }] }`. **Max tokens:** 900.
@@ -87,7 +87,7 @@ Each step is built, checked (typecheck, lint, unit tests, E2E) and committed on 
 | 2 | AI-2 Ask your money | ✅ built |
 | 3 | AI-3 Monthly summary | ✅ built |
 | 4 | AI-5 Spending alerts | ✅ built |
-| 5 | AI-7 Savings tips | ⏳ |
+| 5 | AI-7 Savings tips | ✅ built |
 | 6 | AI-4 Smart budget | ⏳ |
 | 7 | AI-6 Paste to add, then delete `lib/mock/ai.ts` | ⏳ |
 

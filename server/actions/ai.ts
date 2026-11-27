@@ -58,13 +58,10 @@ export async function generateInsightAction(monthKey: string, kind: InsightKind)
       const loaded = await loadAiMonth(key);
       if (!loaded) return MONTH_MISSING;
       const { bundle, currency } = loaded;
-      const prompt = insightPrompt(monthContext(bundle.month, bundle.budgets, currency), k);
-      if (!prompt) return INVALID;
-
       const reply = await completeJson({
         task: k,
         system: systemPrompt(currency, true),
-        messages: [{ role: 'user', content: prompt }],
+        messages: [{ role: 'user', content: insightPrompt(monthContext(bundle.month, bundle.budgets, currency), k) }],
         maxTokens: 900,
         schema: INSIGHT_SCHEMA,
       });

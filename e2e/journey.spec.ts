@@ -315,6 +315,10 @@ test('AI-5: spending alerts are generated and saved for the month', async () => 
   await generateInsightCard('Spending alerts', 'alerts', 'Two things are worth a look this month.');
 });
 
+test('AI-7: savings tips are generated and saved for the month', async () => {
+  await generateInsightCard('Savings tips', 'tips', 'Three easy wins for next month.');
+});
+
 test('G5/S1: currency switch converts every amount; rates are saved; input converts back to SGD', async () => {
   // SGD state: Earned 3000.00, Spent 15.00 + 6.40 = 21.40
   await expectTotals('S$3,000.00', 'S$21.40', 'S$2,978.60');

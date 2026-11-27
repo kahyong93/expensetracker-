@@ -5,7 +5,7 @@
  * UI can show busy states. The real implementation will call /api/ai/* route handlers.
  * Results use the ActionResult shape; error messages are the PRD toast copy.
  */
-import type { ActionResult, EntryType, Insight, InsightKind } from "@/lib/types";
+import type { ActionResult, EntryType } from "@/lib/types";
 
 import { PASTE_MAX_CHARS } from "@/lib/ai-messages";
 
@@ -43,38 +43,6 @@ export async function suggestCategory(input: {
   const hint = CATEGORY_HINTS.find((h) => h.words.some((w) => label.includes(w)));
   const proposed = hint?.category ?? (input.type === "Out" ? "Misc" : "Other income");
   return respond({ category: proposed });
-}
-
-// AI-3/5/7 Insight cards ------------------------------------------------------
-
-const SAMPLE_INSIGHTS: Record<InsightKind, Insight> = {
-  summary: {
-    headline: "A big insurance month, but you still kept something aside.",
-    points: [
-      { title: "Biggest driver", text: "Insurance Policy #2 made up most of your Shopping & Insurance spend." },
-      { title: "Savings result", text: "You saved about 14.6% of what you earned this month." },
-      { title: "Notable pattern", text: "Small transport trips add up: 25 rides averaged under S$5 each." },
-    ],
-  },
-  alerts: {
-    headline: "Two things stood out this month.",
-    points: [
-      { title: "One-off spike", text: "Insurance Policy #2 at S$3,299.25 is far above a normal month." },
-      { title: "Small spends add up", text: "Uniqlo appeared 5 times for S$401.60 in total." },
-    ],
-  },
-  tips: {
-    headline: "Three easy wins for next month.",
-    points: [
-      { title: "Pause Uniqlo", text: "Skipping two purchases could save about S$150 a month." },
-      { title: "Pack lunch twice a week", text: "Food could drop by around S$30 a month." },
-      { title: "Walk short trips", text: "Cutting the shortest rides may save about S$15 a month." },
-    ],
-  },
-};
-
-export async function generateInsight(input: { kind: InsightKind; monthKey: string }): Promise<ActionResult<Insight>> {
-  return respond(SAMPLE_INSIGHTS[input.kind]);
 }
 
 // AI-4 Smart budget -----------------------------------------------------------

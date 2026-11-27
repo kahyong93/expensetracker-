@@ -51,6 +51,15 @@ const FAKE_ALERTS = {
   ],
 };
 
+const FAKE_TIPS = {
+  headline: 'Three easy wins for next month.',
+  points: [
+    { title: 'Brew coffee at home', text: 'Could save about S$20 a month.' },
+    { title: 'Walk short trips', text: 'Could save about S$10 a month.' },
+    { title: 'Pack lunch twice a week', text: 'Could save about S$30 a month.' },
+  ],
+};
+
 /** AI-2: echoes the question so tests can tell replies apart. */
 export async function fakeComplete(request: AiRequest): Promise<string> {
   await wait(DELAY_MS);
@@ -67,6 +76,8 @@ export async function fakeCompleteJson(request: AiRequest & { schema: JsonSchema
       return FAKE_SUMMARY;
     case 'alerts':
       return FAKE_ALERTS;
+    case 'tips':
+      return FAKE_TIPS;
     default:
       return null;
   }

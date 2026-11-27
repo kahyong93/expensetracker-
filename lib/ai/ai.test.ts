@@ -143,3 +143,21 @@ describe('alerts (AI-5)', () => {
     expect(parseInsightReply(reply(6), 'alerts')).toEqual(reply(4));
   });
 });
+
+describe('tips (AI-7)', () => {
+  const point = (n: number) => ({ title: `T${n}`, text: `Text ${n}` });
+  const reply = (count: number) => ({ headline: 'Three easy wins.', points: Array.from({ length: count }, (_, i) => point(i + 1)) });
+
+  it('uses the reference tips task', () => {
+    expect(insightPrompt('CTX', 'tips')).toBe(
+      'CTX\n\nTask: Give 3 practical savings tips tied to specific merchants or categories in the data, each with an estimated monthly saving.' +
+        '\nJSON shape: {"headline": one sentence, "points": [{"title": short, "text": one or two sentences}]}',
+    );
+  });
+
+  it('needs 3 tips and cuts extras', () => {
+    expect(parseInsightReply(reply(2), 'tips')).toBeNull();
+    expect(parseInsightReply(reply(3), 'tips')).toEqual(reply(3));
+    expect(parseInsightReply(reply(4), 'tips')).toEqual(reply(3));
+  });
+});
