@@ -57,8 +57,9 @@ export type BudgetSuggestion = {
 };
 
 /**
- * AI-4: keeps exact category names only, converts each display-currency amount to SGD
- * cents, and drops negative or non-finite amounts. Null when nothing usable is left.
+ * AI-4: one amount per exact category name (unknown names are ignored), converted from the
+ * display currency to SGD cents. Saving replaces every budget for next month, so a reply
+ * with any missing, negative or non-finite amount is rejected whole: nothing is saved.
  */
 export function parseBudgetReply(
   value: unknown,
@@ -71,9 +72,10 @@ export function parseBudgetReply(
   const budgets: Record<string, number> = {};
   for (const category of categories) {
     const cents = displayToCents(value.budgets[category], currency);
-    if (cents != null && cents <= LIMITS.maxAmountCents) budgets[category] = cents;
+    if (cents == null || cents > LIMITS.maxAmountCents) return null;
+    budgets[category] = cents;
   }
-  return Object.keys(budgets).length > 0 ? { budgets, note } : null;
+  return categories.length > 0 ? { budgets, note } : null;
 }
 
 function trimmedString(value: unknown): string | null {

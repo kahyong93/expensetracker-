@@ -190,13 +190,11 @@ describe('smart budget (AI-4)', () => {
     });
   });
 
-  it('drops negative or non-finite amounts, and rejects a reply with no usable budget or a bad note', () => {
-    expect(parseBudgetReply({ budgets: { Food: -5, 'Fixed & Bills': 20 }, note: '' }, cats, SGD)).toEqual({
-      budgets: { 'Fixed & Bills': 2000 },
-      note: '',
-    });
-    expect(parseBudgetReply({ budgets: { Food: -5 }, note: 'x' }, cats, SGD)).toBeNull();
-    expect(parseBudgetReply({ budgets: { Food: 5 }, note: 42 }, cats, SGD)).toBeNull();
+  it('rejects the whole reply when any category is missing or has a bad amount, so nothing is saved', () => {
+    expect(parseBudgetReply({ budgets: { Food: -5, 'Fixed & Bills': 20 }, note: '' }, cats, SGD)).toBeNull();
+    expect(parseBudgetReply({ budgets: { Food: Number.NaN, 'Fixed & Bills': 20 }, note: '' }, cats, SGD)).toBeNull();
+    expect(parseBudgetReply({ budgets: { Food: 5 }, note: 'x' }, cats, SGD)).toBeNull(); // Fixed & Bills missing
+    expect(parseBudgetReply({ budgets: { Food: 5, 'Fixed & Bills': 1 }, note: 42 }, cats, SGD)).toBeNull();
     expect(parseBudgetReply({ budgets: 'nope', note: 'x' }, cats, SGD)).toBeNull();
   });
 });

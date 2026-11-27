@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, SectionTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
-import { AI_BUSY_MESSAGE, PASTE_EMPTY_MESSAGE, PASTE_MAX_CHARS } from "@/lib/ai-messages";
+import { AI_BUSY_MESSAGE, PASTE_EMPTY_MESSAGE, PASTE_MAX_CHARS, PASTE_TOO_LONG_MESSAGE } from "@/lib/ai-messages";
 import type { EntryInput } from "@/lib/types";
 import type { DisplayCurrency } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -51,6 +51,11 @@ export function PasteToAdd({ monthKey, currency }: PasteToAddProps) {
     const trimmed = text.trim();
     if (!trimmed) {
       toast(PASTE_EMPTY_MESSAGE);
+      return;
+    }
+    // Checked here too (not only on the server) so an over-long paste doesn't use up an AI request.
+    if (trimmed.length > PASTE_MAX_CHARS) {
+      toast(PASTE_TOO_LONG_MESSAGE);
       return;
     }
     setBusy(true);
@@ -103,7 +108,6 @@ export function PasteToAdd({ monthKey, currency }: PasteToAddProps) {
         aria-labelledby={titleId}
         aria-describedby={explainerId}
         rows={5}
-        maxLength={PASTE_MAX_CHARS}
         placeholder="e.g. DBS: You paid SGD 12.50 to GRAB on 03 Feb. Kopi 1.80, chicken rice 4.50"
         value={text}
         onChange={(event) => setText(event.target.value)}

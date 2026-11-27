@@ -179,11 +179,14 @@ export function parseBudgets(value: unknown): Record<string, number> | null {
 
 const CHAT_KEYS = ["role", "content"] as const;
 
-/** AI-2: up to CHAT_HISTORY_LIMIT turns, each within limits, ending with the user's question. */
+/**
+ * AI-2: the last CHAT_HISTORY_LIMIT turns, each within limits, ending with the user's
+ * question. Longer histories are trimmed; absurdly long ones are rejected outright.
+ */
 export function parseChatMessages(value: unknown): ChatTurn[] | null {
-  if (!Array.isArray(value) || value.length === 0 || value.length > CHAT_HISTORY_LIMIT) return null;
+  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_ENTRIES_PER_REQUEST) return null;
   const out: ChatTurn[] = [];
-  for (const item of value) {
+  for (const item of value.slice(-CHAT_HISTORY_LIMIT)) {
     if (!hasExactKeys(item, CHAT_KEYS)) return null;
     const role = item.role === "user" || item.role === "assistant" ? item.role : null;
     if (!role) return null;

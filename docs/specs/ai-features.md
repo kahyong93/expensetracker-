@@ -63,7 +63,7 @@ Columns: **Max tokens** is the answer cap from CLAUDE.md §7. **Saves** says wha
 - **Action:** `suggestBudgetAction(monthKey)` → `{ budgets: Record<string, number /* SGD cents */>, note }`
 - **Prompt:** reference `suggestBudget`. Next month is `nextOf(monthKey)`. Expected income is next month's plan if set, otherwise this month's income total, shown in the display currency.
 - **Schema:** built per request. `budgets` is an object with one required number property per expense category, plus `note: string`. **Max tokens:** 600.
-- **Checks:** only the exact category names. Each amount must be a finite number ≥ 0, converted from the display currency to SGD cents with `round(value / rate * 100)`. The note is checked with `parseAiNote`.
+- **Checks:** only the exact category names. Each amount must be a finite number ≥ 0, converted from the display currency to SGD cents with `round(value / rate * 100)`. The note is checked with `parseAiNote`. Saving replaces all of next month's budgets, so a missing or bad amount for any category rejects the whole reply and nothing is saved.
 - **Saves:** `data/plans.replaceBudgets(nextKey, budgets, note)`. Revalidates. Toast "AI budget filled in. Edit any number."
 - **UI:** `components/budget/budget-planner.tsx`. It no longer sends `actuals` or `expectedCents`.
 

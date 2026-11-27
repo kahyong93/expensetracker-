@@ -537,7 +537,16 @@ test('AI-6: paste to add previews rows, saves nothing until confirmed, then adds
   await card.getByRole('button', { name: 'Read it' }).click();
   await toast(page, 'Paste some text first');
 
+  await card.getByRole('textbox').fill('x'.repeat(4001));
+  await card.getByRole('button', { name: 'Read it' }).click();
+  await toast(page, 'Paste up to 4,000 characters');
+
   await card.getByRole('textbox').fill('DBS: You paid SGD 12.50 to GRAB on 03 Feb. Kopi 1.80, vet visit 45');
+  await card.getByRole('button', { name: 'Read it' }).click();
+  await expect(card.getByRole('listitem')).toHaveCount(3);
+  await card.getByRole('button', { name: 'Discard' }).click();
+  await expect(card.getByRole('listitem')).toHaveCount(0);
+
   await card.getByRole('button', { name: 'Read it' }).click();
   await expect(card.getByRole('listitem')).toHaveCount(3);
   expect(await entriesOf(ids.a, 'Jan-25')).toHaveLength(before.length); // nothing saved yet

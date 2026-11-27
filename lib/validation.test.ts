@@ -278,9 +278,15 @@ describe("parseChatMessages (AI-2 chat history)", () => {
     expect(parseChatMessages(ten)).toHaveLength(10);
   });
 
-  it("rejects more than 10, an empty list, or a last message not from the user", () => {
-    const eleven = Array.from({ length: 10 }, (_, i) => assistant(`a${i}`)).concat(user("q"));
-    expect(parseChatMessages(eleven)).toBeNull();
+  it("keeps only the last 10 messages", () => {
+    const twelve = Array.from({ length: 11 }, (_, i) => assistant(`a${i}`)).concat(user("q"));
+    const kept = parseChatMessages(twelve);
+    expect(kept).toHaveLength(10);
+    expect(kept?.[0]).toEqual({ role: "assistant", content: "a2" });
+    expect(kept?.[9]).toEqual({ role: "user", content: "q" });
+  });
+
+  it("rejects an empty list or a last message not from the user", () => {
     expect(parseChatMessages([])).toBeNull();
     expect(parseChatMessages([user("q"), assistant("a")])).toBeNull();
   });

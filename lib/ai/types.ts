@@ -1,3 +1,4 @@
+import 'server-only';
 import type { ChatTurn } from '@/lib/types';
 
 /** Shared shapes for the AI helpers (CLAUDE.md §7). */
