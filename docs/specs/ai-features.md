@@ -1,6 +1,6 @@
 # Spec: AI features via LangChain + OpenAI
 
-- **Status:** In progress (shared setup + AI-1 built)
+- **Status:** Done. All seven features call the real AI Server Actions; the browser stub is deleted.
 - **Behaviour source:** PRD §7.7 (AI-1 to AI-7). **Decisions:** `docs/adr/0001-ai-via-langchain.md`. **Rules:** CLAUDE.md §7.
 - **Goal:** replace the browser stub `lib/mock/ai.ts` with real AI. The UI stays as it is. Only the function each component calls changes.
 
@@ -90,7 +90,7 @@ Each step is built, checked (typecheck, lint, unit tests, E2E) and committed on 
 | 5 | AI-7 Savings tips | ✅ built |
 | 6 | AI-4 Smart budget | ✅ built |
 | 7 | AI-6 Paste to add | ✅ built |
-| 8 | Delete `lib/mock/ai.ts` | ⏳ |
+| 8 | Delete `lib/mock/ai.ts` | ✅ done |
 
 ## 4. Tests
 
