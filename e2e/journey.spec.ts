@@ -296,6 +296,25 @@ test('AI-3: monthly summary is generated, saved for the month, and refreshed', a
   await nav(/^Expenses/).click();
 });
 
+/** Generates one insight card on the AI tab and checks it on screen and in Neon (AI-5/7). */
+async function generateInsightCard(title: string, kind: 'alerts' | 'tips', headline: string) {
+  await nav(/AI helper/).click();
+  const card = page.getByRole('region', { name: title });
+  await card.getByRole('button', { name: 'Generate' }).click();
+  await expect(card).toContainText(headline);
+  await expect(card.getByRole('button', { name: 'Refresh' })).toBeVisible();
+  await expect
+    .poll(async () => (await snapshot(ids.a)).months.find((m) => m.key === THIS)?.aiInsights.find((i) => i.kind === kind)?.payload)
+    .toMatchObject({ headline });
+  await page.reload();
+  await expect(card).toContainText(headline);
+  await nav(/^Expenses/).click();
+}
+
+test('AI-5: spending alerts are generated and saved for the month', async () => {
+  await generateInsightCard('Spending alerts', 'alerts', 'Two things are worth a look this month.');
+});
+
 test('G5/S1: currency switch converts every amount; rates are saved; input converts back to SGD', async () => {
   // SGD state: Earned 3000.00, Spent 15.00 + 6.40 = 21.40
   await expectTotals('S$3,000.00', 'S$21.40', 'S$2,978.60');

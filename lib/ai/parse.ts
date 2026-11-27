@@ -30,6 +30,7 @@ export function parseCategoryReply(value: unknown, categories: readonly string[]
 /** How many points each insight card needs (PRD AI-3/5/7). Extra points are cut. */
 const INSIGHT_POINTS: Partial<Record<InsightKind, { min: number; max: number }>> = {
   summary: { min: 3, max: 3 },
+  alerts: { min: 2, max: 4 },
 };
 
 /** AI-3/5/7: the stored insight shape, with the kind's point count. */

@@ -55,6 +55,8 @@ export function chatMessages(context: string, history: readonly AiMessage[]): Ai
 const INSIGHT_TASKS: Partial<Record<InsightKind, string>> = {
   summary:
     'Write a friendly monthly summary with 3 points: the biggest spending driver, the savings result, and one notable pattern.',
+  alerts:
+    'Find 2-4 unusual or noteworthy spending items: one-off large payments, repeated small spends that add up, or categories over budget.',
 };
 
 const INSIGHT_SHAPE =

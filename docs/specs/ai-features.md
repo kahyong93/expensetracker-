@@ -86,7 +86,7 @@ Each step is built, checked (typecheck, lint, unit tests, E2E) and committed on 
 | 1 | AI-1 Auto-categorise | ✅ built |
 | 2 | AI-2 Ask your money | ✅ built |
 | 3 | AI-3 Monthly summary | ✅ built |
-| 4 | AI-5 Spending alerts | ⏳ |
+| 4 | AI-5 Spending alerts | ✅ built |
 | 5 | AI-7 Savings tips | ⏳ |
 | 6 | AI-4 Smart budget | ⏳ |
 | 7 | AI-6 Paste to add, then delete `lib/mock/ai.ts` | ⏳ |

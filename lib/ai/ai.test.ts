@@ -124,3 +124,22 @@ describe('parseInsightReply', () => {
     expect(parseInsightReply(null, 'summary')).toBeNull();
   });
 });
+
+describe('alerts (AI-5)', () => {
+  const point = (n: number) => ({ title: `T${n}`, text: `Text ${n}` });
+  const reply = (count: number) => ({ headline: 'Two things stood out.', points: Array.from({ length: count }, (_, i) => point(i + 1)) });
+
+  it('uses the reference alerts task', () => {
+    expect(insightPrompt('CTX', 'alerts')).toBe(
+      'CTX\n\nTask: Find 2-4 unusual or noteworthy spending items: one-off large payments, repeated small spends that add up, or categories over budget.' +
+        '\nJSON shape: {"headline": one sentence, "points": [{"title": short, "text": one or two sentences}]}',
+    );
+  });
+
+  it('needs 2 to 4 alerts and cuts extras', () => {
+    expect(parseInsightReply(reply(1), 'alerts')).toBeNull();
+    expect(parseInsightReply(reply(2), 'alerts')).toEqual(reply(2));
+    expect(parseInsightReply(reply(4), 'alerts')).toEqual(reply(4));
+    expect(parseInsightReply(reply(6), 'alerts')).toEqual(reply(4));
+  });
+});

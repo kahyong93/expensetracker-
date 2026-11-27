@@ -43,6 +43,14 @@ const FAKE_SUMMARY = {
   ],
 };
 
+const FAKE_ALERTS = {
+  headline: 'Two things are worth a look this month.',
+  points: [
+    { title: 'Small spends add up', text: 'Coffee showed up several times this month.' },
+    { title: 'One-off spike', text: 'One expense was much larger than the rest.' },
+  ],
+};
+
 /** AI-2: echoes the question so tests can tell replies apart. */
 export async function fakeComplete(request: AiRequest): Promise<string> {
   await wait(DELAY_MS);
@@ -57,6 +65,8 @@ export async function fakeCompleteJson(request: AiRequest & { schema: JsonSchema
       return fakeCategory(prompt);
     case 'summary':
       return FAKE_SUMMARY;
+    case 'alerts':
+      return FAKE_ALERTS;
     default:
       return null;
   }
