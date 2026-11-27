@@ -10,7 +10,7 @@ The seven AI features (PRD §7.7, AI-1 to AI-7) had finished UI but called a bro
 ## Decision
 
 1. **Provider:** OpenAI, called through LangChain (`langchain`, `@langchain/core`, `@langchain/openai`). The model comes from `AI_MODEL` (default `gpt-5.4-mini`) and the key from `OPENAI_API_KEY`.
-2. **Only the basic part of LangChain:** one chat model call per request. No agents, LangGraph, tools, memory or LangSmith tracing. Tracing would send financial data to another service.
+2. **Only the basic part of LangChain:** one chat model call per request. No agents, LangGraph, tools, memory or LangSmith tracing. Tracing would send financial data to another service, so the AI client forces the `LANGSMITH_*` / `LANGCHAIN_*` tracing variables to `false` at load time, even when `.env` turns them on.
 3. **One wrapper:** `lib/ai/client.ts` is the only file that imports LangChain. Switching provider means changing that file and the env.
 4. **Server Actions, not route handlers:** `server/actions/ai.ts`. Each action re-checks the session, applies the rate limit and loads the signed-in user's month from Neon through `/data` helpers. The client sends only the month key and the user's own input, never amounts or categories. `docs/data-fetching.md` records this as the one read exception.
 5. **Structured replies:** `withStructuredOutput(jsonSchema, { method: "jsonSchema", strict: true })` with plain JSON Schemas (no zod). OpenAI then has to fill the form. `lib/ai/parse.ts` still checks what the app depends on: real category names, positive amounts and point counts. OpenAI needs an object at the root, so the paste prompt's shape line asks for `{"entries": [...]}` instead of a bare array. Every other reference prompt is used word for word.

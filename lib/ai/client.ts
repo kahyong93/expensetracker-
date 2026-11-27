@@ -18,6 +18,14 @@ const MAX_RETRIES = 1;
  */
 const REASONING_ALLOWANCE = 2_000;
 
+/**
+ * LangChain sends every prompt and reply to LangSmith when any of these is "true". Prompts
+ * here hold the user's entries and amounts, so tracing is forced off for this process
+ * whatever `.env` says (ADR 0001). LangChain reads them at call time, so this wins.
+ */
+const TRACING_ENV_VARS = ['LANGSMITH_TRACING', 'LANGSMITH_TRACING_V2', 'LANGCHAIN_TRACING', 'LANGCHAIN_TRACING_V2'];
+for (const name of TRACING_ENV_VARS) process.env[name] = 'false';
+
 /** The provider failed (network, auth, quota, timeout). Shown as "AI is busy…". */
 export class AiProviderError extends Error {
   constructor(cause: unknown) {
