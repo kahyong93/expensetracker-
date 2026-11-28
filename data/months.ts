@@ -3,6 +3,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
 import { db } from '@/db';
 import { aiInsights, categories, entries, months } from '@/db/schema';
+import { placeEntry } from '@/lib/plan';
 import { isMonthKey, monthKeyOf, monthSortIndex, nextOf } from '@/lib/months';
 import {
   DEFAULT_IN_CATEGORIES,
@@ -64,7 +65,7 @@ export async function getMonthBundle(key: string): Promise<MonthBundle | null> {
           orderBy: { position: 'asc', createdAt: 'asc' },
           with: {
             entries: {
-              columns: { id: true, label: true, amountCents: true, note: true, createdAt: true },
+              columns: { id: true, label: true, amountCents: true, note: true, sectionId: true, lineId: true, createdAt: true },
               orderBy: { createdAt: 'asc', id: 'asc' },
             },
           },
@@ -86,7 +87,19 @@ export async function getMonthBundle(key: string): Promise<MonthBundle | null> {
   for (const c of month.categories) {
     for (const e of c.entries) {
       rows.push({
-        entry: { id: e.id, type: c.type, category: c.name, label: e.label, amountCents: e.amountCents, note: e.note ?? '' },
+        entry: {
+          id: e.id,
+          type: c.type,
+          category: c.name,
+          label: e.label,
+          amountCents: e.amountCents,
+          note: e.note ?? '',
+          // Expenses saved before sections existed are placed by the keyword rules (S3);
+          // the guess is saved the first time the entry is edited.
+          ...(c.type === 'Out' && !e.lineId
+            ? placeEntry({ label: e.label, note: e.note ?? '', category: c.name })
+            : { sectionId: e.sectionId, lineId: e.lineId }),
+        },
         addedAt: e.createdAt.getTime(),
       });
     }
@@ -136,7 +149,7 @@ function contentInserts(monthId: string, contents: MonthContents): BatchItem<'pg
   const entryRows = contents.entries.flatMap((e, i) => {
     const id = categoryId(e.type, e.category);
     return id
-      ? [{ categoryId: id, label: e.label, amountCents: e.amountCents, note: e.note || null, createdAt: new Date(base + i) }]
+      ? [{ categoryId: id, label: e.label, amountCents: e.amountCents, note: e.note || null, sectionId: e.sectionId, lineId: e.lineId, createdAt: new Date(base + i) }]
       : [];
   });
 
@@ -178,7 +191,7 @@ export async function createMonth(
           columns: { type: true, name: true },
           orderBy: { position: 'asc', createdAt: 'asc' },
           with: {
-            entries: { columns: { label: true, amountCents: true, note: true }, orderBy: { createdAt: 'asc', id: 'asc' } },
+            entries: { columns: { label: true, amountCents: true, note: true, sectionId: true, lineId: true }, orderBy: { createdAt: 'asc', id: 'asc' } },
           },
         },
       },
@@ -190,7 +203,7 @@ export async function createMonth(
         entries: source.categories
           .filter((c) => RECURRING_CATEGORIES.includes(c.name))
           .flatMap((c) =>
-            c.entries.map((e) => ({ type: c.type, category: c.name, label: e.label, amountCents: e.amountCents, note: e.note ?? '' })),
+            c.entries.map((e) => ({ type: c.type, category: c.name, label: e.label, amountCents: e.amountCents, note: e.note ?? '', sectionId: e.sectionId, lineId: e.lineId })),
           ),
       };
     }

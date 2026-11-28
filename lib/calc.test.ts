@@ -25,7 +25,7 @@ import type { Entry, EntryType, MonthData } from "@/lib/types";
 
 let nextId = 1;
 function entry(type: EntryType, category: string, label: string, amountCents: number, note = ""): Entry {
-  return { id: `e${nextId++}`, type, category, label, amountCents, note };
+  return { id: `e${nextId++}`, type, category, label, amountCents, note, sectionId: null, lineId: null };
 }
 
 function month(entries: Entry[], outOrder: string[] = [], inOrder: string[] = []): MonthData {

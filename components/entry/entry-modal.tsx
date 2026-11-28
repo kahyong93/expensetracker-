@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { categoriesOf } from "@/lib/calc";
 import type { Entry, EntryType } from "@/lib/types";
+import { getSection, PLAN, PLAN_LINES, placeEntry } from "@/lib/plan";
 import { centsToInput, type PrefilledAmount } from "@/lib/money";
 import { monthHref, tabFromPathname } from "@/lib/months";
 import { pendingEntryId } from "@/lib/optimistic";
@@ -28,6 +29,9 @@ type FormState = {
   type: EntryType;
   category: string;
   newCategory: string;
+  /** Expenses: plan section and line ids ("" = not chosen yet). */
+  sectionId: string;
+  lineId: string;
   label: string;
   amount: string;
   note: string;
@@ -57,7 +61,7 @@ export function EntryModal({ request, onClose }: { request: EntryModalRequest; o
 
   const [form, setForm] = useState<FormState>(() => {
     if (view.status !== "ready") {
-      return { type: "Out", category: "", newCategory: "", label: "", amount: "", note: "", categoryTouched: false, suggestedFor: "" };
+      return { type: "Out", category: "", newCategory: "", sectionId: "", lineId: "", label: "", amount: "", note: "", categoryTouched: false, suggestedFor: "" };
     }
     if (request.mode === "edit") {
       const e = request.entry;
@@ -65,6 +69,8 @@ export function EntryModal({ request, onClose }: { request: EntryModalRequest; o
         type: e.type,
         category: e.category,
         newCategory: "",
+        sectionId: e.sectionId ?? "",
+        lineId: e.lineId ?? "",
         label: e.label,
         amount: centsToInput(e.amountCents, view.currency),
         note: e.note,
@@ -74,10 +80,16 @@ export function EntryModal({ request, onClose }: { request: EntryModalRequest; o
     }
     const cats = categoriesOf(view.month, request.type);
     const category = request.category ?? cats[0] ?? NEW_CATEGORY;
+    // "+ Add to {column}" on an expense column named like a plan line pre-selects that line.
+    const preLine = request.type === "Out" && request.category
+      ? PLAN_LINES.find((l) => l.name.toLowerCase() === request.category!.toLowerCase())
+      : undefined;
     return {
       type: request.type,
       category,
       newCategory: "",
+      sectionId: preLine?.sectionId ?? "",
+      lineId: preLine?.id ?? "",
       label: PREFILL_LABEL_CATEGORIES.includes(category) ? category : "",
       amount: "",
       note: "",
@@ -100,7 +112,7 @@ export function EntryModal({ request, onClose }: { request: EntryModalRequest; o
 
   const pickType = (type: EntryType) => {
     if (type === form.type) return;
-    set({ type, category: categoriesOf(month, type)[0] ?? NEW_CATEGORY, newCategory: "" });
+    set({ type, category: categoriesOf(month, type)[0] ?? NEW_CATEGORY, newCategory: "", sectionId: "", lineId: "" });
   };
 
   const runSuggest = async () => {
@@ -118,6 +130,19 @@ export function EntryModal({ request, onClose }: { request: EntryModalRequest; o
       return;
     }
     const proposed = res.data.category.trim();
+    if (form.type === "Out") {
+      // Until the AI picks plan lines itself: match its answer to a line name, else the keyword rules.
+      const line =
+        PLAN_LINES.find((l) => l.name.toLowerCase() === proposed.toLowerCase()) ??
+        PLAN_LINES.find((l) => l.id === placeEntry({ label, note: form.note, category: proposed }).lineId);
+      if (!line) {
+        toast("No matching category, please pick one");
+        return;
+      }
+      set({ sectionId: line.sectionId, lineId: line.id });
+      toast(`Suggested category: ${line.name}`);
+      return;
+    }
     const hit = categories.find((c) => c.toLowerCase() === proposed.toLowerCase());
     set(hit ? { category: hit, newCategory: "" } : { category: NEW_CATEGORY, newCategory: proposed });
     toast(`Suggested category: ${hit ?? proposed}`);
@@ -133,7 +158,7 @@ export function EntryModal({ request, onClose }: { request: EntryModalRequest; o
   const submit = async () => {
     const category = form.category === NEW_CATEGORY ? form.newCategory : form.category;
     const result = validateEntry(
-      { type: form.type, label: form.label, category, amount: form.amount, note: form.note },
+      { type: form.type, label: form.label, category, amount: form.amount, note: form.note, sectionId: form.sectionId, lineId: form.lineId },
       currency,
       prefilled,
     );
@@ -168,6 +193,8 @@ export function EntryModal({ request, onClose }: { request: EntryModalRequest; o
   const amountId = `${ids}-amount`;
   const noteId = `${ids}-note`;
   const categoryError = errors.category ?? null;
+  const sectionId = `${ids}-section`;
+  const sectionLines = getSection(form.sectionId)?.lines ?? [];
 
   return (
     <Modal
@@ -213,6 +240,51 @@ export function EntryModal({ request, onClose }: { request: EntryModalRequest; o
           />
         </Field>
 
+        {form.type === "Out" ? (
+          <>
+            <Field label="Section" htmlFor={sectionId} error={errors.section}>
+              <Select
+                id={sectionId}
+                value={form.sectionId}
+                onChange={(e) => set({ sectionId: e.target.value, lineId: "", categoryTouched: true })}
+                aria-invalid={!!errors.section}
+              >
+                <option value="">Choose a section…</option>
+                {PLAN.map((sec) => (
+                  <option key={sec.id} value={sec.id}>
+                    {sec.title}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field
+              label="Category"
+              htmlFor={categoryId}
+              error={categoryError}
+              labelAction={
+                <Button variant="soft" size="xs" onClick={() => void runSuggest()} disabled={busy}>
+                  {busy ? "Thinking…" : "✦ Suggest"}
+                </Button>
+              }
+            >
+              <Select
+                id={categoryId}
+                value={form.lineId}
+                disabled={!form.sectionId}
+                onChange={(e) => set({ lineId: e.target.value, categoryTouched: true })}
+                aria-invalid={!!categoryError}
+              >
+                <option value="">{form.sectionId ? "Choose a category…" : "Choose a section first"}</option>
+                {sectionLines.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </>
+        ) : (
+          <>
         <Field
           label="Category"
           htmlFor={categoryId}
@@ -257,6 +329,9 @@ export function EntryModal({ request, onClose }: { request: EntryModalRequest; o
             ) : null}
           </div>
         ) : null}
+
+          </>
+        )}
 
         <div className="grid grid-cols-[1fr_1.3fr] gap-2.5">
           <Field label={`Amount (${currency.sym})`} htmlFor={amountId} error={errors.amount}>

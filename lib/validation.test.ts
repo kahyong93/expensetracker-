@@ -30,8 +30,9 @@ const SGD = resolveCurrency("SGD");
 const GBP = resolveCurrency("GBP");
 const UUID = "3f2b8c1e-9a4d-4e7b-8c2a-1d5e6f7a8b9c";
 
+// Income by default: it keeps a free-text category. Expenses use sections and lines (below).
 const form = (over: Partial<EntryFormValues> = {}): EntryFormValues => ({
-  type: "Out",
+  type: "In",
   label: "Kopi",
   category: "Food",
   amount: "1.20",
@@ -43,7 +44,7 @@ describe("validateEntry (client form)", () => {
   it("trims and converts a valid entry", () => {
     expect(validateEntry(form({ label: "  Kopi ", category: " Food ", note: " am " }), SGD)).toEqual({
       ok: true,
-      data: { type: "Out", label: "Kopi", category: "Food", amountCents: 120, note: "am" },
+      data: { type: "In", label: "Kopi", category: "Food", amountCents: 120, note: "am", sectionId: null, lineId: null },
     });
   });
 
@@ -181,7 +182,7 @@ describe("server parsers: scalars", () => {
 });
 
 describe("parseEntryInput (untrusted Server Action input)", () => {
-  const valid = { type: "Out", category: "Food", label: "Kopi", amountCents: 120, note: "" };
+  const valid = { type: "In", category: "Food", label: "Kopi", amountCents: 120, note: "", sectionId: null, lineId: null };
 
   it("accepts a valid entry and trims text", () => {
     expect(parseEntryInput({ ...valid, label: " Kopi ", note: " am " })).toEqual({ ...valid, note: "am" });
@@ -190,7 +191,7 @@ describe("parseEntryInput (untrusted Server Action input)", () => {
   it("rejects unknown and missing fields", () => {
     expect(parseEntryInput({ ...valid, userId: "user_other" })).toBeNull();
     expect(parseEntryInput({ ...valid, id: UUID })).toBeNull();
-    expect(parseEntryInput({ type: "Out", category: "Food", label: "Kopi", amountCents: 120 })).toBeNull();
+    expect(parseEntryInput({ type: "In", category: "Food", label: "Kopi", amountCents: 120 })).toBeNull();
   });
 
   it("rejects bad values", () => {
@@ -299,5 +300,56 @@ describe("parseChatMessages (AI-2 chat history)", () => {
     expect(parseChatMessages([assistant("x".repeat(LIMITS.chatMessage + 1)), user("q")])).toHaveLength(2);
     expect(parseChatMessages([{ role: "user", content: "q", extra: 1 }])).toBeNull();
     expect(parseChatMessages("q")).toBeNull();
+  });
+});
+
+describe("expense placement (sections and lines)", () => {
+  const out = (over: Partial<EntryFormValues> = {}) =>
+    form({ type: "Out", category: "", sectionId: "needs", lineId: "groceries", ...over });
+
+  it("saves the section id and line id, and names the category after the line", () => {
+    expect(validateEntry(out(), SGD)).toEqual({
+      ok: true,
+      data: { type: "Out", label: "Kopi", category: "Groceries", amountCents: 120, note: "", sectionId: "needs", lineId: "groceries" },
+    });
+  });
+
+  it("requires a section and a category for an expense", () => {
+    expect(validateEntry(out({ sectionId: "", lineId: "" }), SGD)).toEqual({
+      ok: false,
+      errors: { section: "Required", category: "Required" },
+    });
+  });
+
+  it("rejects a category that is not in the chosen section", () => {
+    expect(validateEntry(out({ sectionId: "fun", lineId: "rent" }), SGD)).toEqual({
+      ok: false,
+      errors: { category: "Pick a category from this section" },
+    });
+  });
+
+  it("ignores any section on income", () => {
+    expect(validateEntry(form({ sectionId: "needs", lineId: "rent" }), SGD)).toMatchObject({
+      ok: true,
+      data: { type: "In", sectionId: null, lineId: null },
+    });
+  });
+
+  it("parseEntryInput derives the category from the line and rejects mismatches", () => {
+    const e = { type: "Out", category: "anything", label: "Rent", amountCents: 80000, note: "", sectionId: "needs", lineId: "rent" };
+    expect(parseEntryInput(e)).toMatchObject({ category: "Rent / mortgage", sectionId: "needs", lineId: "rent" });
+    expect(parseEntryInput({ ...e, sectionId: "fun" })).toBeNull();
+    expect(parseEntryInput({ ...e, lineId: "nope" })).toBeNull();
+    expect(parseEntryInput({ ...e, lineId: "rent; drop" })).toBeNull();
+  });
+
+  it("parseEntryInput puts an expense with no line under Unassigned", () => {
+    const e = { type: "Out", category: "Food", label: "Kopi", amountCents: 120, note: "", sectionId: null, lineId: null };
+    expect(parseEntryInput(e)).toMatchObject({ category: "Unassigned", sectionId: null, lineId: null });
+  });
+
+  it("parseEntryInput rejects a plan placement on income", () => {
+    const e = { type: "In", category: "Work", label: "Pay", amountCents: 100, note: "", sectionId: "needs", lineId: "rent" };
+    expect(parseEntryInput(e)).toBeNull();
   });
 });

@@ -27,7 +27,7 @@ function entriesWord(count: number): string {
 }
 
 function toEntryInput(row: PreviewRow): EntryInput {
-  return { type: row.type, category: row.category, label: row.label, amountCents: row.amountCents, note: row.note };
+  return { type: row.type, category: row.category, label: row.label, amountCents: row.amountCents, note: row.note, sectionId: row.sectionId, lineId: row.lineId };
 }
 
 /**

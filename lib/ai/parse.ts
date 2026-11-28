@@ -1,5 +1,6 @@
 import 'server-only';
 import type { EntryInput, EntryType, Insight, InsightKind } from '@/lib/types';
+import { placeEntry } from '@/lib/plan';
 import { displayToCents, type DisplayCurrency } from '@/lib/money';
 import {
   LIMITS,
@@ -106,7 +107,8 @@ export function parsePasteReply(
     if (amountCents == null || amountCents <= 0 || amountCents > LIMITS.maxAmountCents) continue;
     const category = categories[type].find((c) => c.toLowerCase() === name.toLowerCase()) ?? name;
     const note = (trimmedString(item.note) ?? '').slice(0, LIMITS.note);
-    rows.push({ type, category, label, amountCents, note });
+    const placed = type === 'Out' ? placeEntry({ label, note, category }) : { sectionId: null, lineId: null };
+    rows.push({ type, category, label, amountCents, note, ...placed });
   }
   return rows;
 }

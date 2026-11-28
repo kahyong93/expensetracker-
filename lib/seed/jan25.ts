@@ -1,4 +1,5 @@
 import { toCents } from "@/lib/money";
+import { placeEntry } from "@/lib/plan";
 import type { Entry, EntryType, MonthData } from "@/lib/types";
 
 /** The Jan-25 sample month, copied from seedMonths() in the reference design. */
@@ -19,6 +20,8 @@ export function seedJan25(): MonthData {
     label,
     amountCents: toCents(amount),
     note,
+    // Sample expenses are placed by the keyword rules; income has no plan placement.
+    ...(type === "Out" ? placeEntry({ label, note, category }) : { sectionId: null, lineId: null }),
   });
 
   const food = [1, 1.8, 32, 3.4, 2.9, 4, 4, 4.3, 4, 3, 38, 4, 2.9, 4, 4, 2.9, 4.3, 4.3, 3.4, 3.96, 3.96, 3.96, 3.96, 3.96, 3.96];

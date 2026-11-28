@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { applyPatch, isPendingEntry, pendingEntryId } from "@/lib/optimistic";
 import type { CashflowData, Entry } from "@/lib/types";
 
-const kopi: Entry = { id: "a", type: "Out", category: "Food", label: "Kopi", amountCents: 120, note: "" };
-const bus: Entry = { id: "b", type: "Out", category: "Transport", label: "Bus", amountCents: 200, note: "" };
+const kopi: Entry = { id: "a", type: "Out", category: "Food", label: "Kopi", amountCents: 120, note: "", sectionId: null, lineId: null };
+const bus: Entry = { id: "b", type: "Out", category: "Transport", label: "Bus", amountCents: 200, note: "", sectionId: null, lineId: null };
 
 function data(): CashflowData {
   return {
@@ -54,7 +54,7 @@ describe("applyPatch", () => {
   });
 
   it("adds a new entry and its new category column", () => {
-    const pet: Entry = { id: pendingEntryId(), type: "Out", category: "Pets", label: "Kibble", amountCents: 900, note: "" };
+    const pet: Entry = { id: pendingEntryId(), type: "Out", category: "Pets", label: "Kibble", amountCents: 900, note: "", sectionId: null, lineId: null };
     const next = applyPatch(data(), { kind: "saveEntry", entry: pet });
     expect(next.bundle?.month.entries).toHaveLength(3);
     expect(next.bundle?.month.outOrder).toEqual(["Food", "Transport", "Pets"]);
@@ -68,7 +68,7 @@ describe("applyPatch", () => {
   });
 
   it("adds an income category to the income order", () => {
-    const pay: Entry = { id: "c", type: "In", category: "Bonus", label: "Bonus", amountCents: 1000, note: "" };
+    const pay: Entry = { id: "c", type: "In", category: "Bonus", label: "Bonus", amountCents: 1000, note: "", sectionId: null, lineId: null };
     const next = applyPatch(data(), { kind: "saveEntry", entry: pay });
     expect(next.bundle?.month.inOrder).toEqual(["Work", "Bonus"]);
     expect(next.bundle?.month.outOrder).toEqual(["Food", "Transport"]);

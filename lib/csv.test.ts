@@ -30,8 +30,8 @@ describe("buildMonthCsv (PRD X1)", () => {
     outOrder: ["Food"],
     inOrder: ["Work"],
     entries: [
-      { id: "1", type: "Out", category: "Food", label: "Kopi", amountCents: 120, note: "=cmd" },
-      { id: "2", type: "In", category: "Work", label: "Salary", amountCents: 500000, note: "" },
+      { id: "1", type: "Out", category: "Food", label: "Kopi", amountCents: 120, note: "=cmd", sectionId: null, lineId: null },
+      { id: "2", type: "In", category: "Work", label: "Salary", amountCents: 500000, note: "", sectionId: null, lineId: null },
     ],
   };
 

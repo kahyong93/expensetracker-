@@ -16,8 +16,8 @@ const MONTH: MonthData = {
   outOrder: ['Food', 'Transport'],
   inOrder: ['Work'],
   entries: [
-    { id: '1', type: 'Out', category: 'Food', label: 'Kopi', amountCents: 180, note: '' },
-    { id: '2', type: 'In', category: 'Work', label: 'Salary', amountCents: 500000, note: 'Jan pay' },
+    { id: '1', type: 'Out', category: 'Food', label: 'Kopi', amountCents: 180, note: '', sectionId: null, lineId: null },
+    { id: '2', type: 'In', category: 'Work', label: 'Salary', amountCents: 500000, note: 'Jan pay', sectionId: null, lineId: null },
   ],
 };
 
@@ -215,8 +215,9 @@ describe('paste to add (AI-6)', () => {
     expect(
       parsePasteReply({ entries: [row(), row({ type: 'In', category: 'Bonus', label: 'Year-end', amount: 50, note: 'Dec' })] }, cats, USD),
     ).toEqual([
-      { type: 'Out', category: 'Food', label: 'Kopi', amountCents: 180, note: '' },
-      { type: 'In', category: 'Bonus', label: 'Year-end', amountCents: 10000, note: 'Dec' },
+      // Expenses are placed by the keyword rules until the AI picks lines itself (food -> Groceries).
+      { type: 'Out', category: 'Food', label: 'Kopi', amountCents: 180, note: '', sectionId: 'needs', lineId: 'groceries' },
+      { type: 'In', category: 'Bonus', label: 'Year-end', amountCents: 10000, note: 'Dec', sectionId: null, lineId: null },
     ]);
   });
 
@@ -236,7 +237,7 @@ describe('paste to add (AI-6)', () => {
       cats,
       SGD,
     );
-    expect(rows).toEqual([{ type: 'Out', category: 'Food', label: 'Kopi', amountCents: 90, note: 'n'.repeat(LIMITS.note) }]);
+    expect(rows).toEqual([{ type: 'Out', category: 'Food', label: 'Kopi', amountCents: 90, note: 'n'.repeat(LIMITS.note), sectionId: 'needs', lineId: 'groceries' }]);
   });
 
   it('keeps at most 200 rows and rejects a bad shape', () => {

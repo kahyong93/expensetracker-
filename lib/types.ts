@@ -14,6 +14,10 @@ export type Entry = {
   label: string;
   amountCents: number;
   note: string;
+  /** Budget plan section id (lib/plan.ts). Expenses only; null for income and Unassigned. */
+  sectionId: string | null;
+  /** Budget plan line id (lib/plan.ts). Expenses only; null for income and Unassigned. */
+  lineId: string | null;
 };
 
 export type EntryInput = Omit<Entry, "id">;

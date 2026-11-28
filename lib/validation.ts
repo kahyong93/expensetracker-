@@ -3,6 +3,7 @@
  * errors; the `parse*` functions run in Server Actions on untrusted input and reject
  * anything malformed, out of range, or carrying unknown fields.
  */
+import { getLine, getSection, UNASSIGNED } from "@/lib/plan";
 import { CURRENCIES, prefilledInputToCents, type CurrencyCode, type DisplayCurrency, type PrefilledAmount } from "@/lib/money";
 import {
   INSIGHT_KINDS,
@@ -39,9 +40,29 @@ export type EntryFormValues = {
   /** Raw amount string in the display currency. */
   amount: string;
   note: string;
+  /** Expenses: the chosen plan section and line ids ("" = not chosen). Ignored for income. */
+  sectionId?: string;
+  lineId?: string;
 };
 
-export type EntryFieldErrors = Partial<Record<"label" | "category" | "amount" | "note", string>>;
+export type EntryFieldErrors = Partial<Record<"label" | "category" | "section" | "amount" | "note", string>>;
+
+/**
+ * Plan placement of an entry. Income has none. An expense with a line gets the line's
+ * name as its category; an expense without one is Unassigned.
+ */
+export function placement(
+  type: EntryType,
+  sectionId: string | null | undefined,
+  lineId: string | null | undefined,
+): { sectionId: string | null; lineId: string | null; category: string } | null {
+  if (type === "In") return sectionId || lineId ? null : { sectionId: null, lineId: null, category: "" };
+  if (!sectionId && !lineId) return { sectionId: null, lineId: null, category: UNASSIGNED };
+  const line = getLine(lineId);
+  if (!lineId) return getSection(sectionId) ? { sectionId: sectionId ?? null, lineId: null, category: UNASSIGNED } : null;
+  if (!line || line.sectionId !== sectionId) return null;
+  return { sectionId: line.sectionId, lineId: line.id, category: line.name };
+}
 
 export function validateEntry(
   values: EntryFormValues,
@@ -51,20 +72,33 @@ export function validateEntry(
 ): { ok: true; data: EntryInput } | { ok: false; errors: EntryFieldErrors } {
   const errors: EntryFieldErrors = {};
   const label = values.label.trim();
-  const category = values.category.trim();
+  let category = values.category.trim();
   const note = values.note.trim();
   const amountCents = prefilledInputToCents(values.amount, currency, prefilled);
+  let sectionId: string | null = null;
+  let lineId: string | null = null;
 
   if (!label) errors.label = "Required";
   else if (label.length > LIMITS.label) errors.label = `Keep it under ${LIMITS.label} characters`;
-  if (!category) errors.category = "Required";
+  if (values.type === "Out") {
+    // Expenses pick a section and one of its lines; the line name is the category.
+    const placed = values.sectionId && values.lineId ? placement("Out", values.sectionId, values.lineId) : null;
+    if (!values.sectionId) errors.section = "Required";
+    if (!values.lineId) errors.category = "Required";
+    else if (values.sectionId && !placed) errors.category = "Pick a category from this section";
+    if (placed) {
+      category = placed.category;
+      sectionId = placed.sectionId;
+      lineId = placed.lineId;
+    }
+  } else if (!category) errors.category = "Required";
   else if (category.length > LIMITS.category) errors.category = `Keep it under ${LIMITS.category} characters`;
   if (amountCents == null) errors.amount = "Enter an amount of 0 or more";
   else if (amountCents > LIMITS.maxAmountCents) errors.amount = "That amount looks too large";
   if (note.length > LIMITS.note) errors.note = `Keep it under ${LIMITS.note} characters`;
 
   if (Object.keys(errors).length > 0 || amountCents == null) return { ok: false, errors };
-  return { ok: true, data: { type: values.type, label, category, amountCents, note } };
+  return { ok: true, data: { type: values.type, label, category, amountCents, note, sectionId, lineId } };
 }
 
 export function validateCategoryName(name: string): string | null {
@@ -138,7 +172,12 @@ export function parseCategoryName(value: unknown): string | null {
   return boundedText(value, LIMITS.category, { required: true });
 }
 
-const ENTRY_KEYS = ["type", "category", "label", "amountCents", "note"] as const;
+const ENTRY_KEYS = ["type", "category", "label", "amountCents", "note", "sectionId", "lineId"] as const;
+
+function nullableId(value: unknown): string | null | undefined {
+  if (value === null) return null;
+  return typeof value === "string" && /^[a-z]{2,20}$/.test(value) ? value : undefined;
+}
 
 export function parseEntryInput(value: unknown): EntryInput | null {
   if (!hasExactKeys(value, ENTRY_KEYS)) return null;
@@ -147,8 +186,22 @@ export function parseEntryInput(value: unknown): EntryInput | null {
   const label = boundedText(value.label, LIMITS.label, { required: true });
   const amountCents = parseCents(value.amountCents);
   const note = boundedText(value.note, LIMITS.note, { required: false });
+  const sectionId = nullableId(value.sectionId);
+  const lineId = nullableId(value.lineId);
   if (!type || category == null || label == null || amountCents == null || note == null) return null;
-  return { type, category, label, amountCents, note };
+  if (sectionId === undefined || lineId === undefined) return null;
+  // Income has no plan placement; an expense's line must belong to its section.
+  const placed = placement(type, sectionId, lineId);
+  if (!placed) return null;
+  return {
+    type,
+    category: type === "Out" ? placed.category : category,
+    label,
+    amountCents,
+    note,
+    sectionId: placed.sectionId,
+    lineId: placed.lineId,
+  };
 }
 
 export function parseEntryInputs(value: unknown): EntryInput[] | null {

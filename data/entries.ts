@@ -2,6 +2,7 @@ import 'server-only';
 import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db';
 import { categories, entries } from '@/db/schema';
+import { getLine, PLAN_LINES } from '@/lib/plan';
 import type { ActionResult, EntryInput, EntryType } from '@/lib/types';
 import { requireUserId } from './auth';
 import { ENTRY_NOT_FOUND, CATEGORY_NOT_FOUND, MONTH_NOT_FOUND, findOwnedMonth, ok, ownedCategoryIds, sameName } from './scope';
@@ -64,6 +65,8 @@ export async function addEntries(monthKey: string, inputs: readonly EntryInput[]
           label: input.label,
           amountCents: input.amountCents,
           note: input.note || null,
+          sectionId: input.sectionId,
+          lineId: input.lineId,
           createdAt: new Date(base + i),
         }]
       : [];
@@ -72,6 +75,11 @@ export async function addEntries(monthKey: string, inputs: readonly EntryInput[]
 
   await db.insert(entries).values(rows);
   return ok(rows.length);
+}
+
+/** Id of the plan line whose name matches (case-insensitive), or undefined. */
+function lineIdByName(name: string): string | undefined {
+  return PLAN_LINES.find((l) => sameName(l.name, name))?.id;
 }
 
 /** The user's entry with its category, or undefined. */
@@ -95,7 +103,14 @@ export async function updateEntry(entryId: string, input: EntryInput): Promise<A
 
   const updated = await db
     .update(entries)
-    .set({ categoryId: target.id, label: input.label, amountCents: input.amountCents, note: input.note || null })
+    .set({
+      categoryId: target.id,
+      label: input.label,
+      amountCents: input.amountCents,
+      note: input.note || null,
+      sectionId: input.sectionId,
+      lineId: input.lineId,
+    })
     .where(and(eq(entries.id, entryId), inArray(entries.categoryId, ownedCategoryIds(userId))))
     .returning({ id: entries.id });
   return updated.length > 0 ? ok(undefined) : ENTRY_NOT_FOUND;
@@ -127,10 +142,12 @@ export async function moveEntry(entryId: string, categoryName: string): Promise<
   const target = siblings.find((c) => c.name === categoryName) ?? siblings.find((c) => sameName(c.name, categoryName));
   if (!target) return CATEGORY_NOT_FOUND;
   if (target.id === entry.categoryId) return ok(undefined);
+  const line = entry.category.type === 'Out' ? getLine(lineIdByName(target.name)) : undefined;
 
   const moved = await db
     .update(entries)
-    .set({ categoryId: target.id })
+    // An expense moved to a column named like a plan line takes that line (and its section).
+    .set({ categoryId: target.id, ...(line ? { sectionId: line.sectionId, lineId: line.id } : {}) })
     .where(and(eq(entries.id, entryId), inArray(entries.categoryId, ownedCategoryIds(userId))))
     .returning({ id: entries.id });
   return moved.length > 0 ? ok(undefined) : ENTRY_NOT_FOUND;
