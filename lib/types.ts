@@ -1,4 +1,5 @@
 import type { CurrencyCode } from "@/lib/money";
+import type { CarryMode, Split } from "@/lib/plan";
 
 /**
  * Domain shapes shared by the server (`/data`, Server Actions) and the client. Money is
@@ -60,12 +61,18 @@ export type AppData = {
   rates: Partial<Record<CurrencyCode, number>>;
   layout: LayoutPref;
   settings: Settings;
+  /** Budget plan preferences: target split per section and how unused budget carries over. */
+  planPrefs: PlanPrefs;
 };
+
+export type PlanPrefs = { split: Split; carryMode: CarryMode };
 
 /** Budgets, expected income and AI note for one month key (can exist before the month, PRD P8). */
 export type MonthPlan = {
-  /** Category name → budget in SGD cents. */
+  /** Category name → budget in SGD cents (legacy key; removed with the contract ticket). */
   budgets: Record<string, number>;
+  /** Plan line id (lib/plan.ts) → budget in SGD cents. */
+  lines: Record<string, number>;
   expectedCents: number | null;
   aiNote: string | null;
 };

@@ -14,7 +14,7 @@ type BudgetSummaryProps = {
   isPhone: boolean;
   aiNote: string | null;
   aiBusy: boolean;
-  /** No expense categories this month: nothing to fill or suggest. */
+  /** No expense with a plan line this month: nothing to fill or suggest. */
   noCategories: boolean;
   /** Nothing to clear: no budgets, no note, no drafts. */
   nothingToClear: boolean;

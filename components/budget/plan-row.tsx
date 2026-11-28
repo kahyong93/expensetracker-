@@ -3,7 +3,7 @@
 import { useId, type KeyboardEvent } from "react";
 import { Input } from "@/components/ui/field";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import type { PlanDiff, PlanRow as PlanRowData } from "@/lib/calc";
+import type { PlanDiff, PlanLineRow } from "@/lib/calc";
 import { centsToInput, formatMoney, type DisplayCurrency } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { PLAN_GRID_LAPTOP, PLAN_GRID_PHONE } from "@/components/budget/plan-grid";
@@ -23,7 +23,7 @@ function diffLabel(diff: PlanDiff, monthKey: string, currency: DisplayCurrency):
 }
 
 type PlanRowProps = {
-  row: PlanRowData;
+  row: PlanLineRow;
   monthKey: string;
   nextKey: string;
   currency: DisplayCurrency;
@@ -61,7 +61,10 @@ export function PlanRow({ row, monthKey, nextKey, currency, isPhone, value, erro
     >
       <span className="flex min-w-0 items-center gap-2 text-sm font-extrabold">
         <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ background: row.color }} />
-        <span className="min-w-0 truncate">{row.name}</span>
+        <span className="min-w-0">
+          <span className="block truncate">{row.name}</span>
+          {row.hint ? <span className="block truncate text-[11px] font-bold text-cf-ink-muted">{row.hint}</span> : null}
+        </span>
       </span>
 
       <span className="text-right text-sm font-bold text-cf-ink-soft">

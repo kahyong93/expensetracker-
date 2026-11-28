@@ -5,7 +5,7 @@
  * dropped on error, which is the rollback).
  */
 import type { CurrencyCode } from "@/lib/money";
-import type { CashflowData, Entry, LayoutPref, MonthBundle, MonthData, Settings } from "@/lib/types";
+import type { CashflowData, Entry, LayoutPref, MonthBundle, MonthData, PlanPrefs, Settings } from "@/lib/types";
 
 const PENDING_ID_PREFIX = "pending-";
 
@@ -30,6 +30,10 @@ export type CashflowPatch =
   /** Next month's plan (Budget tab). */
   | { kind: "setBudget"; category: string; cents: number | null }
   | { kind: "replaceBudgets"; budgets: Record<string, number>; aiNote?: string }
+  /** One plan line's budget by line id (null clears it). */
+  | { kind: "setLineBudget"; lineId: string; cents: number | null }
+  | { kind: "replaceLineBudgets"; budgets: Record<string, number> }
+  | { kind: "setPlanPrefs"; prefs: PlanPrefs }
   | { kind: "clearBudgets" }
   | { kind: "setExpected"; cents: number | null }
   | { kind: "setCurrency"; code: CurrencyCode }
@@ -88,11 +92,23 @@ export function applyPatch(data: CashflowData, patch: CashflowPatch): CashflowDa
         nextPlan: {
           ...b.nextPlan,
           budgets: { ...patch.budgets },
+          lines: {},
           aiNote: patch.aiNote === undefined ? b.nextPlan.aiNote : patch.aiNote || null,
         },
       }));
+    case "setLineBudget":
+      return patchBundle(data, (b) => {
+        const lines = { ...b.nextPlan.lines };
+        if (patch.cents == null) delete lines[patch.lineId];
+        else lines[patch.lineId] = patch.cents;
+        return { ...b, nextPlan: { ...b.nextPlan, lines } };
+      });
+    case "replaceLineBudgets":
+      return patchBundle(data, (b) => ({ ...b, nextPlan: { ...b.nextPlan, lines: { ...patch.budgets } } }));
+    case "setPlanPrefs":
+      return { ...data, app: { ...data.app, planPrefs: patch.prefs } };
     case "clearBudgets":
-      return patchBundle(data, (b) => ({ ...b, nextPlan: { ...b.nextPlan, budgets: {}, aiNote: null } }));
+      return patchBundle(data, (b) => ({ ...b, nextPlan: { ...b.nextPlan, budgets: {}, lines: {}, aiNote: null } }));
     case "setExpected":
       return patchBundle(data, (b) => ({ ...b, nextPlan: { ...b.nextPlan, expectedCents: patch.cents } }));
     case "setCurrency":

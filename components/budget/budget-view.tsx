@@ -16,6 +16,7 @@ export function BudgetView() {
       month={view.month}
       plan={view.nextPlan}
       currency={view.currency}
+      planPrefs={view.planPrefs}
     />
   );
 }

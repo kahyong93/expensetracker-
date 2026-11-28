@@ -3,7 +3,7 @@
  * errors; the `parse*` functions run in Server Actions on untrusted input and reject
  * anything malformed, out of range, or carrying unknown fields.
  */
-import { getLine, getSection, UNASSIGNED } from "@/lib/plan";
+import { CARRY_MODES, getLine, getSection, SPLIT_DEFAULT, UNASSIGNED, type Split } from "@/lib/plan";
 import { CURRENCIES, prefilledInputToCents, type CurrencyCode, type DisplayCurrency, type PrefilledAmount } from "@/lib/money";
 import {
   INSIGHT_KINDS,
@@ -13,6 +13,7 @@ import {
   type Insight,
   type InsightKind,
   type LayoutPref,
+  type PlanPrefs,
   type Settings,
 } from "@/lib/types";
 
@@ -213,6 +214,42 @@ export function parseEntryInputs(value: unknown): EntryInput[] | null {
     out.push(parsed);
   }
   return out;
+}
+
+/** A plan line id from lib/plan.ts. */
+export function parseLineId(value: unknown): string | null {
+  return typeof value === "string" && getLine(value) ? value : null;
+}
+
+/** Plan line id → cents. Every id must be a real line and every amount valid. */
+export function parseLineBudgets(value: unknown): Record<string, number> | null {
+  if (!isRecord(value)) return null;
+  const out: Record<string, number> = {};
+  const rows = Object.entries(value);
+  if (rows.length > MAX_ENTRIES_PER_REQUEST) return null;
+  for (const [id, cents] of rows) {
+    const lineId = parseLineId(id);
+    const amount = parseCents(cents);
+    if (lineId == null || amount == null) return null;
+    out[lineId] = amount;
+  }
+  return out;
+}
+
+/** Split targets (whole percents, 0 to 100 each) and carry mode for the budget page. */
+export function parsePlanPrefs(value: unknown): PlanPrefs | null {
+  if (!hasExactKeys(value, ["split", "carryMode"])) return null;
+  const { split, carryMode } = value;
+  if (!hasExactKeys(split, Object.keys(SPLIT_DEFAULT))) return null;
+  const parsed: Partial<Split> = {};
+  for (const key of Object.keys(SPLIT_DEFAULT) as (keyof Split)[]) {
+    const pct = split[key];
+    if (typeof pct !== "number" || !Number.isInteger(pct) || pct < 0 || pct > 100) return null;
+    parsed[key] = pct;
+  }
+  const mode = CARRY_MODES.find((m) => m === carryMode);
+  if (!mode) return null;
+  return { split: parsed as Split, carryMode: mode };
 }
 
 /** Category name → cents. Every name and amount must be valid. */

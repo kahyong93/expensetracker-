@@ -39,11 +39,15 @@ export async function getLatestMonthKey(): Promise<string | null> {
 }
 
 function toPlan(
-  row: { expectedIncomeCents: number | null; aiNote: string | null; budgetLines: { categoryName: string; amountCents: number }[] } | undefined,
+  row: { expectedIncomeCents: number | null; aiNote: string | null; budgetLines: { categoryName: string; lineId: string | null; amountCents: number }[] } | undefined,
 ): MonthPlan {
   const budgets: Record<string, number> = {};
-  for (const line of row?.budgetLines ?? []) budgets[line.categoryName] = line.amountCents;
-  return { budgets, expectedCents: row?.expectedIncomeCents ?? null, aiNote: row?.aiNote || null };
+  const lines: Record<string, number> = {};
+  for (const line of row?.budgetLines ?? []) {
+    budgets[line.categoryName] = line.amountCents;
+    if (line.lineId) lines[line.lineId] = line.amountCents;
+  }
+  return { budgets, lines, expectedCents: row?.expectedIncomeCents ?? null, aiNote: row?.aiNote || null };
 }
 
 /**
@@ -76,7 +80,7 @@ export async function getMonthBundle(key: string): Promise<MonthBundle | null> {
     db.query.monthPlans.findMany({
       where: { userId, monthKey: { in: [key, nextKey] } },
       columns: { monthKey: true, expectedIncomeCents: true, aiNote: true },
-      with: { budgetLines: { columns: { categoryName: true, amountCents: true } } },
+      with: { budgetLines: { columns: { categoryName: true, lineId: true, amountCents: true } } },
     }),
   ]);
 

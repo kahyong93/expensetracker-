@@ -4,7 +4,7 @@ import { createContext, startTransition, useCallback, useContext, useMemo, useOp
 import { resolveCurrency, type DisplayCurrency } from "@/lib/money";
 import { nextOf } from "@/lib/months";
 import { applyPatch, type CashflowPatch } from "@/lib/optimistic";
-import type { ActionResult, CashflowData, Insight, InsightKind, MonthData, MonthPlan, Settings } from "@/lib/types";
+import type { ActionResult, CashflowData, Insight, InsightKind, MonthData, MonthPlan, PlanPrefs, Settings } from "@/lib/types";
 
 /**
  * Hands the data the month layout (a Server Component) loaded to the client tree. It
@@ -84,6 +84,7 @@ export type MonthView =
       nextPlan: MonthPlan;
       insights: Partial<Record<InsightKind, Insight>>;
       settings: Settings;
+      planPrefs: PlanPrefs;
     };
 
 /** Everything a page needs for the month in the URL, or "missing" when there's no such month. */
@@ -100,5 +101,6 @@ export function useMonthView(): MonthView {
     nextPlan: bundle.nextPlan,
     insights: bundle.insights,
     settings: app.settings,
+    planPrefs: app.planPrefs,
   };
 }

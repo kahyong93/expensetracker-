@@ -1,10 +1,11 @@
 import 'server-only';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, or } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
 import { db } from '@/db';
 import { budgetLines, monthPlans } from '@/db/schema';
 import { requireUserId } from './auth';
-import { ensureUserRow } from './scope';
+import { getLine, PLAN_LINES } from '@/lib/plan';
+import { ensureUserRow, sameName } from './scope';
 
 /*
  * Month plans: budgets, expected income and the AI budget note, keyed by month key so a
@@ -51,7 +52,14 @@ export async function replaceBudgets(
   aiNote?: string,
 ): Promise<void> {
   const userId = await requireUserId();
-  const rows = Object.entries(budgets).map(([categoryName, amountCents]) => ({ userId, monthKey, categoryName, amountCents }));
+  // Name-keyed callers (AI-4 until it picks lines itself): a name that matches a plan line also gets its line id.
+  const rows = Object.entries(budgets).map(([categoryName, amountCents]) => ({
+    userId,
+    monthKey,
+    categoryName,
+    lineId: PLAN_LINES.find((l) => sameName(l.name, categoryName))?.id ?? null,
+    amountCents,
+  }));
   const batch: Batch = [...ensurePlan(userId, monthKey), db.delete(budgetLines).where(linesOf(userId, monthKey))];
   if (rows.length > 0) batch.push(db.insert(budgetLines).values(rows));
   if (aiNote !== undefined) {
@@ -62,6 +70,42 @@ export async function replaceBudgets(
         .where(and(eq(monthPlans.userId, userId), eq(monthPlans.monthKey, monthKey))),
     );
   }
+  await db.batch(batch);
+}
+
+/** Set (cents) or remove (null) one plan line's budget (PRD P2, P9). */
+export async function setLineBudget(monthKey: string, lineId: string, cents: number | null): Promise<void> {
+  const userId = await requireUserId();
+  const line = getLine(lineId);
+  if (!line) return;
+  if (cents == null) {
+    await db
+      .delete(budgetLines)
+      .where(and(linesOf(userId, monthKey), or(eq(budgetLines.lineId, lineId), eq(budgetLines.categoryName, line.name))));
+    return;
+  }
+  // Written under the line's name too, so name-keyed readers keep working until they move to line ids.
+  await db.batch([
+    ...ensurePlan(userId, monthKey),
+    db
+      .insert(budgetLines)
+      .values({ userId, monthKey, categoryName: line.name, lineId, amountCents: cents })
+      .onConflictDoUpdate({
+        target: [budgetLines.userId, budgetLines.monthKey, budgetLines.categoryName],
+        set: { lineId, amountCents: cents },
+      }),
+  ]);
+}
+
+/** Replace every budget for a month with these plan lines (P5 "Fill with…"). Keeps the AI note. */
+export async function replaceLineBudgets(monthKey: string, budgets: Record<string, number>): Promise<void> {
+  const rows = Object.entries(budgets).flatMap(([lineId, amountCents]) => {
+    const line = getLine(lineId);
+    return line ? [{ monthKey, categoryName: line.name, lineId, amountCents }] : [];
+  });
+  const userId = await requireUserId();
+  const batch: Batch = [...ensurePlan(userId, monthKey), db.delete(budgetLines).where(linesOf(userId, monthKey))];
+  if (rows.length > 0) batch.push(db.insert(budgetLines).values(rows.map((r) => ({ ...r, userId }))));
   await db.batch(batch);
 }
 

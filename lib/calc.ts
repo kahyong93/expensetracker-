@@ -3,6 +3,7 @@
  * Every amount in and out is integer SGD cents.
  */
 import { categoryColor } from "@/lib/design/palette";
+import { getSection, PLAN, PLAN_LINES, type SectionId, type Split } from "@/lib/plan";
 import type { Entry, EntryType, MonthData } from "@/lib/types";
 
 export function sumCents(entries: readonly Entry[]): number {
@@ -274,4 +275,107 @@ export function categoryTotal(month: MonthData, type: EntryType, category: strin
 /** Count of entries in one category (for delete-empty-only, PRD B11). */
 export function categoryCount(month: MonthData, type: EntryType, category: string): number {
   return month.entries.filter((e) => e.type === type && e.category === category).length;
+}
+
+// ---------------------------------------------------------------------------
+// Budget plan by section and line (PRD §7.10). Entries match budgets by saved line id.
+
+/** Spent per plan line id, from expenses that have a saved line. */
+export function actualsByLine(month: MonthData): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const e of month.entries) {
+    if (e.type === "Out" && e.lineId) out[e.lineId] = (out[e.lineId] ?? 0) + e.amountCents;
+  }
+  return out;
+}
+
+/** Expenses with no plan line yet (Unassigned): excluded from every line's spend. */
+export function unassignedCents(month: MonthData): number {
+  return month.entries.reduce((acc, e) => (e.type === "Out" && !e.lineId ? acc + e.amountCents : acc), 0);
+}
+
+export type PlanLineRow = PlanRow & { id: string; hint: string; sectionId: SectionId };
+
+/** One planner row per plan line, in budget-page order. */
+export function planLineRows(month: MonthData, lineBudgets: Record<string, number>): PlanLineRow[] {
+  const actuals = actualsByLine(month);
+  const scale = Math.max(1, ...PLAN_LINES.map((l) => actuals[l.id] ?? 0), ...PLAN_LINES.map((l) => lineBudgets[l.id] ?? 0));
+  return PLAN_LINES.map((line) => {
+    const actualCents = actuals[line.id] ?? 0;
+    const budgetCents = lineBudgets[line.id] ?? null;
+    let diff: PlanDiff = { kind: "none" };
+    if (budgetCents != null) {
+      if (budgetCents === actualCents) diff = { kind: "same" };
+      else if (budgetCents < actualCents) diff = { kind: "less", cents: actualCents - budgetCents };
+      else diff = { kind: "more", cents: budgetCents - actualCents };
+    }
+    return {
+      id: line.id,
+      hint: line.hint,
+      sectionId: line.sectionId,
+      name: line.name,
+      color: getSection(line.sectionId)?.color ?? "",
+      actualCents,
+      budgetCents,
+      actualBarPct: (actualCents / scale) * 100,
+      budgetBarPct: ((budgetCents ?? 0) / scale) * 100,
+      diff,
+    };
+  });
+}
+
+/** How a section's budget compares with its split target (reference planSections). */
+export type SectionStatus =
+  | { kind: "none" }
+  | { kind: "on" }
+  /** Investment / Savings only: planned less than the target. */
+  | { kind: "short"; cents: number }
+  /** Investment / Savings only: planned more than the target. */
+  | { kind: "above"; cents: number }
+  | { kind: "over"; cents: number }
+  | { kind: "under"; cents: number };
+
+export type SectionPlan = {
+  id: SectionId;
+  totalCents: number;
+  targetCents: number;
+  splitPct: number;
+  /** Share of expected income this section's budget takes. */
+  pctOfIncome: number;
+  /** Budget as a share of its target, capped at 100. */
+  barPct: number;
+  status: SectionStatus;
+};
+
+/** Per-section totals against the split targets of expected income. */
+export function sectionPlans(lineBudgets: Record<string, number>, expectedCents: number, split: Split): SectionPlan[] {
+  return PLAN.map((section) => {
+    const totalCents = section.lines.reduce((acc, l) => acc + (lineBudgets[l.id] ?? 0), 0);
+    const targetCents = Math.round((expectedCents * split[section.id]) / 100);
+    let status: SectionStatus = { kind: "none" };
+    if (totalCents > 0) {
+      const diff = totalCents - targetCents;
+      if (diff === 0) status = { kind: "on" };
+      else if (section.id === "invest") status = diff < 0 ? { kind: "short", cents: -diff } : { kind: "above", cents: diff };
+      else status = diff > 0 ? { kind: "over", cents: diff } : { kind: "under", cents: -diff };
+    }
+    return {
+      id: section.id,
+      totalCents,
+      targetCents,
+      splitPct: split[section.id],
+      pctOfIncome: expectedCents > 0 ? (totalCents / expectedCents) * 100 : 0,
+      barPct: Math.min(targetCents > 0 ? (totalCents / targetCents) * 100 : 0, 100),
+      status,
+    };
+  });
+}
+
+/** Total budget and what is left to save of the expected income (PRD P4). */
+export function planLineTotals(
+  lineBudgets: Record<string, number>,
+  expectedCents: number,
+): { totalCents: number; leftToSaveCents: number } {
+  const totalCents = PLAN_LINES.reduce((acc, l) => acc + (lineBudgets[l.id] ?? 0), 0);
+  return { totalCents, leftToSaveCents: expectedCents - totalCents };
 }

@@ -14,11 +14,12 @@ function data(): CashflowData {
       rates: {},
       layout: "auto",
       settings: { autoCategorise: true, compactCards: false, showAudit: true },
+      planPrefs: { split: { needs: 50, invest: 20, fun: 30 }, carryMode: "cum" },
     },
     bundle: {
       month: { key: "Jan-25", entries: [kopi, bus], outOrder: ["Food", "Transport"], inOrder: ["Work"], isSample: false },
       budgets: {},
-      nextPlan: { budgets: { Food: 5000 }, expectedCents: null, aiNote: "Keep it up" },
+      nextPlan: { budgets: { Food: 5000 }, lines: { groceries: 5000 }, expectedCents: null, aiNote: "Keep it up" },
       insights: {},
     },
   };
@@ -113,5 +114,20 @@ describe("applyPatch", () => {
   it("leaves data alone when the month doesn't exist", () => {
     const missing: CashflowData = { ...data(), bundle: null };
     expect(applyPatch(missing, { kind: "deleteEntry", id: "a" })).toBe(missing);
+  });
+
+  it("sets, replaces and clears budgets by plan line id", () => {
+    const set = applyPatch(data(), { kind: "setLineBudget", lineId: "rent", cents: 80000 });
+    expect(set.bundle?.nextPlan.lines).toEqual({ groceries: 5000, rent: 80000 });
+    const cleared = applyPatch(set, { kind: "setLineBudget", lineId: "groceries", cents: null });
+    expect(cleared.bundle?.nextPlan.lines).toEqual({ rent: 80000 });
+    const replaced = applyPatch(set, { kind: "replaceLineBudgets", budgets: { util: 1000 } });
+    expect(replaced.bundle?.nextPlan.lines).toEqual({ util: 1000 });
+    expect(applyPatch(set, { kind: "clearBudgets" }).bundle?.nextPlan.lines).toEqual({});
+  });
+
+  it("updates split and carry preferences", () => {
+    const prefs = { split: { needs: 40, invest: 30, fun: 30 }, carryMode: "last" as const };
+    expect(applyPatch(data(), { kind: "setPlanPrefs", prefs }).app.planPrefs).toEqual(prefs);
   });
 });

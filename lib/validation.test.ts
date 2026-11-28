@@ -16,6 +16,9 @@ import {
   parseInsight,
   parseInsightKind,
   parseLayout,
+  parseLineBudgets,
+  parseLineId,
+  parsePlanPrefs,
   parseMonthLabel,
   parsePlanKey,
   parseRate,
@@ -351,5 +354,33 @@ describe("expense placement (sections and lines)", () => {
   it("parseEntryInput rejects a plan placement on income", () => {
     const e = { type: "In", category: "Work", label: "Pay", amountCents: 100, note: "", sectionId: "needs", lineId: "rent" };
     expect(parseEntryInput(e)).toBeNull();
+  });
+});
+
+describe("plan line budgets and preferences", () => {
+  it("parseLineId accepts only real plan line ids", () => {
+    expect(parseLineId("groceries")).toBe("groceries");
+    expect(parseLineId("Groceries")).toBeNull();
+    expect(parseLineId("nope")).toBeNull();
+    expect(parseLineId(null)).toBeNull();
+  });
+
+  it("parseLineBudgets needs real line ids and valid cents", () => {
+    expect(parseLineBudgets({ rent: 80000, stocks: 0 })).toEqual({ rent: 80000, stocks: 0 });
+    expect(parseLineBudgets({ Food: 100 })).toBeNull();
+    expect(parseLineBudgets({ rent: -1 })).toBeNull();
+    expect(parseLineBudgets({ rent: 1.5 })).toBeNull();
+    expect(parseLineBudgets([])).toBeNull();
+  });
+
+  it("parsePlanPrefs accepts whole-percent splits and a known carry mode", () => {
+    const ok = { split: { needs: 50, invest: 20, fun: 30 }, carryMode: "cum" };
+    expect(parsePlanPrefs(ok)).toEqual(ok);
+    expect(parsePlanPrefs({ ...ok, carryMode: "last" })).toMatchObject({ carryMode: "last" });
+    expect(parsePlanPrefs({ ...ok, carryMode: "weekly" })).toBeNull();
+    expect(parsePlanPrefs({ ...ok, split: { ...ok.split, fun: 101 } })).toBeNull();
+    expect(parsePlanPrefs({ ...ok, split: { ...ok.split, fun: 2.5 } })).toBeNull();
+    expect(parsePlanPrefs({ ...ok, split: { needs: 50, invest: 20 } })).toBeNull();
+    expect(parsePlanPrefs({ ...ok, extra: 1 })).toBeNull();
   });
 });

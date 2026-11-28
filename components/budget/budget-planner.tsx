@@ -9,19 +9,21 @@ import {
 } from "@/components/budget/budget-input";
 import { BudgetSummary } from "@/components/budget/budget-summary";
 import { PlanTable } from "@/components/budget/plan-table";
+import { PlanTargets } from "@/components/budget/plan-targets";
 import { useMutate } from "@/components/providers/cashflow-data-provider";
 import { useLayoutMode } from "@/components/providers/layout-mode-provider";
 import { useToast } from "@/components/ui/toast";
-import { actualsByCategory, categoriesOf, monthTotals, planRows, planTotals } from "@/lib/calc";
+import { actualsByLine, monthTotals, planLineRows, planLineTotals, sectionPlans, unassignedCents } from "@/lib/calc";
 import { AI_BUSY_MESSAGE } from "@/lib/ai-messages";
-import type { ActionResult, MonthData, MonthPlan } from "@/lib/types";
+import type { ActionResult, MonthData, MonthPlan, PlanPrefs } from "@/lib/types";
 import { centsToInput, type DisplayCurrency } from "@/lib/money";
 import { suggestBudgetAction } from "@/server/actions/ai";
 import {
   clearBudgetsAction,
-  replaceBudgetsAction,
-  setBudgetAction,
+  replaceLineBudgetsAction,
   setExpectedIncomeAction,
+  setLineBudgetAction,
+  setPlanPrefsAction,
 } from "@/server/actions/plans";
 
 type BudgetPlannerProps = {
@@ -31,6 +33,7 @@ type BudgetPlannerProps = {
   /** Next month's saved plan. */
   plan: MonthPlan;
   currency: DisplayCurrency;
+  planPrefs: PlanPrefs;
 };
 
 /**
@@ -38,7 +41,7 @@ type BudgetPlannerProps = {
  * they work before that month exists (P8). Inputs buffer the raw string and commit on
  * blur or Enter; totals and bars update live from the drafts.
  */
-export function BudgetPlanner({ monthKey, nextKey, month, plan, currency }: BudgetPlannerProps) {
+export function BudgetPlanner({ monthKey, nextKey, month, plan, currency, planPrefs }: BudgetPlannerProps) {
   const { isPhone } = useLayoutMode();
   const toast = useToast();
   const mutate = useMutate();
@@ -46,7 +49,8 @@ export function BudgetPlanner({ monthKey, nextKey, month, plan, currency }: Budg
   const [expectedDraft, setExpectedDraft] = useState<string | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
 
-  const storedBudgets = plan.budgets;
+  // Budgets are stored per plan line id (lib/plan.ts).
+  const storedBudgets = plan.lines;
   const aiNote = plan.aiNote;
 
   // Budget writes are optimistic; a failure rolls back to the saved plan with a toast.
@@ -55,13 +59,13 @@ export function BudgetPlanner({ monthKey, nextKey, month, plan, currency }: Budg
     if (!res.ok) toast(res.message);
   };
 
-  const categories = useMemo(() => categoriesOf(month, "Out"), [month]);
-  const actuals = useMemo(() => actualsByCategory(month), [month]);
+  const actuals = useMemo(() => actualsByLine(month), [month]);
+  const unassigned = useMemo(() => unassignedCents(month), [month]);
   const liveBudgets = useMemo(
     () => applyBudgetDrafts(storedBudgets, drafts, currency),
     [storedBudgets, drafts, currency],
   );
-  const rows = useMemo(() => planRows(month, liveBudgets), [month, liveBudgets]);
+  const rows = useMemo(() => planLineRows(month, liveBudgets), [month, liveBudgets]);
 
   // Expected income defaults to this month's income (P3).
   const defaultExpectedCents = useMemo(() => monthTotals(month).earnedCents, [month]);
@@ -71,7 +75,8 @@ export function BudgetPlanner({ monthKey, nextKey, month, plan, currency }: Budg
   if (expectedParsed?.kind === "cents") liveExpectedCents = expectedParsed.cents;
   else if (expectedParsed?.kind === "clear") liveExpectedCents = defaultExpectedCents;
 
-  const totals = planTotals(categories, liveBudgets, liveExpectedCents);
+  const totals = planLineTotals(liveBudgets, liveExpectedCents);
+  const sections = sectionPlans(liveBudgets, liveExpectedCents, planPrefs.split);
 
   const errors = useMemo(() => {
     const out: Record<string, string> = {};
@@ -82,17 +87,17 @@ export function BudgetPlanner({ monthKey, nextKey, month, plan, currency }: Budg
     return out;
   }, [drafts, currency]);
 
-  // P9: an empty input removes that category's budget. Invalid input stays as a draft.
-  function commitBudget(category: string) {
-    const raw = drafts[category];
+  // P9: an empty input removes that line's budget. Invalid input stays as a draft.
+  function commitBudget(lineId: string) {
+    const raw = drafts[lineId];
     if (raw === undefined) return;
     const parsed = parseAmountInput(raw, currency);
     if (parsed.kind === "invalid") return;
     const cents = parsed.kind === "clear" ? null : parsed.cents;
-    if ((storedBudgets[category] ?? null) !== cents) {
-      void save(mutate({ kind: "setBudget", category, cents }, () => setBudgetAction(nextKey, category, cents)));
+    if ((storedBudgets[lineId] ?? null) !== cents) {
+      void save(mutate({ kind: "setLineBudget", lineId, cents }, () => setLineBudgetAction(nextKey, lineId, cents)));
     }
-    setDrafts((prev) => withoutDraft(prev, category));
+    setDrafts((prev) => withoutDraft(prev, lineId));
   }
 
   // P3: an empty input goes back to the default (this month's income).
@@ -109,7 +114,7 @@ export function BudgetPlanner({ monthKey, nextKey, month, plan, currency }: Budg
 
   // P5
   function fill() {
-    void save(mutate({ kind: "replaceBudgets", budgets: actuals }, () => replaceBudgetsAction(nextKey, actuals)));
+    void save(mutate({ kind: "replaceLineBudgets", budgets: actuals }, () => replaceLineBudgetsAction(nextKey, actuals)));
     setDrafts({});
     toast(`Filled with ${monthKey} amounts`);
   }
@@ -141,6 +146,10 @@ export function BudgetPlanner({ monthKey, nextKey, month, plan, currency }: Budg
     }
   }
 
+  function savePrefs(prefs: PlanPrefs) {
+    void save(mutate({ kind: "setPlanPrefs", prefs }, () => setPlanPrefsAction(prefs)));
+  }
+
   const nothingToClear =
     Object.keys(storedBudgets).length === 0 && !aiNote && Object.keys(drafts).length === 0;
 
@@ -153,7 +162,7 @@ export function BudgetPlanner({ monthKey, nextKey, month, plan, currency }: Budg
         isPhone={isPhone}
         aiNote={aiNote}
         aiBusy={aiBusy}
-        noCategories={categories.length === 0}
+        noCategories={Object.keys(actuals).length === 0}
         nothingToClear={nothingToClear}
         expectedValue={expectedDraft ?? centsToInput(storedExpectedCents, currency)}
         expectedError={expectedParsed?.kind === "invalid" ? expectedParsed.message : null}
@@ -165,8 +174,11 @@ export function BudgetPlanner({ monthKey, nextKey, month, plan, currency }: Budg
         onExpectedChange={setExpectedDraft}
         onExpectedCommit={commitExpected}
       />
+      <PlanTargets split={planPrefs.split} carryMode={planPrefs.carryMode} isPhone={isPhone} onSave={savePrefs} />
       <PlanTable
         rows={rows}
+        sections={sections}
+        unassignedCents={unassigned}
         monthKey={monthKey}
         nextKey={nextKey}
         currency={currency}

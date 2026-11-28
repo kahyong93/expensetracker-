@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   actualsByCategory,
+  actualsByLine,
+  planLineRows,
+  planLineTotals,
+  sectionPlans,
+  unassignedCents,
   balanceMood,
   biggestExpenses,
   budgetStatus,
@@ -310,5 +315,59 @@ describe("formatPct", () => {
     expect(formatPct(12.36)).toBe("12.4%");
     expect(formatPct(5, 2)).toBe("5.00%");
     expect(formatPct(0)).toBe("0.0%");
+  });
+});
+
+describe("budget plan by line", () => {
+  const month = (entries: Entry[]): MonthData => ({ key: "Jan-25", isSample: false, outOrder: [], inOrder: [], entries });
+  const spend = (label: string, cents: number, lineId: string | null, sectionId: string | null = lineId ? "needs" : null): Entry => ({
+    id: label,
+    type: "Out",
+    category: "x",
+    label,
+    amountCents: cents,
+    note: "",
+    sectionId,
+    lineId,
+  });
+  const split = { needs: 50, invest: 20, fun: 30 };
+
+  it("sums spend per saved line id and reports unassigned spend separately", () => {
+    const m = month([spend("a", 500, "groceries"), spend("b", 300, "groceries"), spend("c", 700, "rent"), spend("d", 90, null)]);
+    expect(actualsByLine(m)).toEqual({ groceries: 800, rent: 700 });
+    expect(unassignedCents(m)).toBe(90);
+  });
+
+  it("ignores income entries", () => {
+    const m = month([{ ...spend("pay", 9000, null), type: "In" }]);
+    expect(actualsByLine(m)).toEqual({});
+    expect(unassignedCents(m)).toBe(0);
+  });
+
+  it("builds one row per plan line with the budget difference", () => {
+    const rows = planLineRows(month([spend("a", 800, "groceries")]), { groceries: 1000, rent: 50000 });
+    expect(rows).toHaveLength(23);
+    expect(rows[0].id).toBe("rent");
+    expect(rows.find((r) => r.id === "groceries")).toMatchObject({ actualCents: 800, budgetCents: 1000, diff: { kind: "more", cents: 200 } });
+    expect(rows.find((r) => r.id === "util")).toMatchObject({ actualCents: 0, budgetCents: null, diff: { kind: "none" } });
+  });
+
+  it("compares each section with its split target of expected income", () => {
+    const plans = sectionPlans({ rent: 60000, groceries: 10000, stocks: 5000, dining: 40000 }, 200000, split);
+    const by = (id: string) => plans.find((p) => p.id === id)!;
+    expect(by("needs")).toMatchObject({ totalCents: 70000, targetCents: 100000, status: { kind: "under", cents: 30000 } });
+    expect(by("invest")).toMatchObject({ totalCents: 5000, targetCents: 40000, status: { kind: "short", cents: 35000 } });
+    expect(by("fun")).toMatchObject({ totalCents: 40000, targetCents: 60000, status: { kind: "under", cents: 20000 } });
+    expect(sectionPlans({ rent: 120000 }, 200000, split)[0].status).toEqual({ kind: "over", cents: 20000 });
+    expect(sectionPlans({ rent: 100000 }, 200000, split)[0].status).toEqual({ kind: "on" });
+    expect(sectionPlans({}, 200000, split)[0].status).toEqual({ kind: "none" });
+  });
+
+  it("treats going above the investment target as good, not over", () => {
+    expect(sectionPlans({ stocks: 50000 }, 200000, split)[1].status).toEqual({ kind: "above", cents: 10000 });
+  });
+
+  it("totals the plan and what is left to save", () => {
+    expect(planLineTotals({ rent: 60000, stocks: 5000 }, 100000)).toEqual({ totalCents: 65000, leftToSaveCents: 35000 });
   });
 });

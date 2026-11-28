@@ -1,8 +1,18 @@
 'use server';
 
 import * as plansData from '@/data/plans';
-import type { ActionResult } from '@/lib/types';
-import { parseAiNote, parseBudgets, parseCategoryName, parseCents, parsePlanKey } from '@/lib/validation';
+import * as settingsData from '@/data/settings';
+import type { ActionResult, PlanPrefs } from '@/lib/types';
+import {
+  parseAiNote,
+  parseBudgets,
+  parseCategoryName,
+  parseCents,
+  parseLineBudgets,
+  parseLineId,
+  parsePlanKey,
+  parsePlanPrefs,
+} from '@/lib/validation';
 import { INVALID, done, runAction } from './run-action';
 
 /*
@@ -17,6 +27,39 @@ export async function setBudgetAction(monthKey: string, category: string, cents:
     const amount = cents == null ? null : parseCents(cents);
     if (!key || !name || (cents != null && amount == null)) return INVALID;
     await plansData.setBudget(key, name, amount);
+    return done;
+  });
+}
+
+/** Set or clear one plan line's budget, by line id (PRD P2, P9). */
+export async function setLineBudgetAction(monthKey: string, lineId: string, cents: number | null): Promise<ActionResult> {
+  return runAction(async () => {
+    const key = parsePlanKey(monthKey);
+    const line = parseLineId(lineId);
+    const amount = cents == null ? null : parseCents(cents);
+    if (!key || !line || (cents != null && amount == null)) return INVALID;
+    await plansData.setLineBudget(key, line, amount);
+    return done;
+  });
+}
+
+/** P5 "Fill with…": every line's budget at once, by line id. */
+export async function replaceLineBudgetsAction(monthKey: string, budgets: Record<string, number>): Promise<ActionResult> {
+  return runAction(async () => {
+    const key = parsePlanKey(monthKey);
+    const parsed = parseLineBudgets(budgets);
+    if (!key || !parsed) return INVALID;
+    await plansData.replaceLineBudgets(key, parsed);
+    return done;
+  });
+}
+
+/** Split targets and carry mode (shared by every month). */
+export async function setPlanPrefsAction(prefs: PlanPrefs): Promise<ActionResult> {
+  return runAction(async () => {
+    const parsed = parsePlanPrefs(prefs);
+    if (!parsed) return INVALID;
+    await settingsData.updatePlanPrefs(parsed);
     return done;
   });
 }
