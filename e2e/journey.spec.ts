@@ -745,3 +745,54 @@ test('G6/G7: phone layout, FAB adds an item', async () => {
   await expect.poll(async () => (await snapshot(ids.b)).user?.layout).toBe('auto');
 });
 
+
+// ---------------------------------------------------------------------------- user A against user B
+
+test("A2 (reverse): user A's tampered requests cannot delete or move user B's entry, and A's plan changes leave B's plan alone", async () => {
+  const mineIdOfB = (await entryNamed('Mine', ids.b))!.id;
+
+  // B has a plan of its own to protect.
+  await page.goto(`/m/${THIS}/budget`);
+  const bGroceries = page.getByLabel(`Groceries budget for ${NEXT} (S$)`);
+  await bGroceries.fill('22');
+  await bGroceries.press('Enter');
+  await expect.poll(async () => (await snapshot(ids.b)).plans.find((p) => p.monthKey === NEXT)?.budgetLines.map((l) => [l.lineId, l.amountCents]))
+    .toEqual([['groceries', 2200]]);
+
+  await clerk.signOut({ page });
+  await signIn(page, 'a');
+  await page.goto(`/m/${THIS}/expenses`);
+  await expect(page.getByText('Mine')).toHaveCount(0); // A never sees B's entry
+
+  // A's delete and move requests are rewritten to name B's entry; both must fail.
+  let untamper = await tamperNextAction(lunchIdOfA, mineIdOfB);
+  await column('Groceries').getByRole('button', { name: 'Delete Lunch' }).click();
+  await confirmWith('Delete');
+  await toast(page, 'Something went wrong, try again');
+  await untamper();
+
+  untamper = await tamperNextAction(lunchIdOfA, mineIdOfB);
+  await column('Groceries').getByLabel('Move Lunch to category').selectOption('Transport');
+  await toast(page, 'Something went wrong, try again');
+  await untamper();
+
+  expect(await entryNamed('Mine', ids.b)).toMatchObject({ category: 'Groceries', lineId: 'groceries', cents: 100 });
+  expect((await entryNamed('Lunch', ids.a))?.lineId).toBe('groceries'); // A's own entry is untouched too
+
+  // A changes A's own plan for the same month key; B's row is not affected.
+  await page.goto(`/m/${THIS}/budget`);
+  const aGroceries = page.getByLabel(`Groceries budget for ${NEXT} (S$)`);
+  await aGroceries.fill('33');
+  await aGroceries.press('Enter');
+  await expect.poll(async () => (await snapshot(ids.a)).plans.find((p) => p.monthKey === NEXT)?.budgetLines.map((l) => [l.lineId, l.amountCents]))
+    .toEqual([['groceries', 3300]]);
+  expect((await snapshot(ids.b)).plans.find((p) => p.monthKey === NEXT)?.budgetLines.map((l) => [l.lineId, l.amountCents])).toEqual([['groceries', 2200]]);
+
+  // A's Reset clears A's plan and nothing of B's.
+  await page.getByRole('button', { name: 'Reset to sample data' }).click();
+  await confirmWith('Reset');
+  await toast(page, 'Restored Jan-25 data');
+  expect((await snapshot(ids.a)).plans).toHaveLength(0);
+  expect((await snapshot(ids.b)).plans.find((p) => p.monthKey === NEXT)?.budgetLines).toHaveLength(1);
+  expect(await entryNamed('Mine', ids.b)).toBeTruthy();
+});
