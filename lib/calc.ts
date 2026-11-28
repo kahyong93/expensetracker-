@@ -127,7 +127,6 @@ export type CategoryStat = {
 export function categoryBreakdown(
   month: MonthData,
   type: EntryType,
-  budgets: Record<string, number> = {},
 ): CategoryStat[] {
   const entries = entriesOfType(month, type);
   const typeTotal = sumCents(entries);
@@ -135,7 +134,6 @@ export function categoryBreakdown(
     const items = entries.filter((e) => e.category === name);
     const totalCents = sumCents(items);
     const { solid, tint } = categoryColor(index);
-    const budgetCents = type === "Out" ? budgets[name] : undefined;
     return {
       name,
       index,
@@ -144,7 +142,7 @@ export function categoryBreakdown(
       count: items.length,
       totalCents,
       sharePct: typeTotal ? (totalCents / typeTotal) * 100 : 0,
-      budget: budgetCents == null ? null : budgetStatus(totalCents, budgetCents),
+      budget: null,
     };
   });
 }
@@ -230,47 +228,6 @@ export type PlanRow = {
   budgetBarPct: number;
   diff: PlanDiff;
 };
-
-/** Budget planner rows for next month, one per expense category of this month (PRD P2). */
-export function planRows(month: MonthData, nextBudgets: Record<string, number>): PlanRow[] {
-  const stats = categoryBreakdown(month, "Out");
-  const scale = Math.max(1, ...stats.map((s) => s.totalCents), ...stats.map((s) => nextBudgets[s.name] ?? 0));
-  return stats.map((s) => {
-    const budgetCents = nextBudgets[s.name] ?? null;
-    let diff: PlanDiff = { kind: "none" };
-    if (budgetCents != null) {
-      if (budgetCents === s.totalCents) diff = { kind: "same" };
-      else if (budgetCents < s.totalCents) diff = { kind: "less", cents: s.totalCents - budgetCents };
-      else diff = { kind: "more", cents: budgetCents - s.totalCents };
-    }
-    return {
-      name: s.name,
-      color: s.color,
-      actualCents: s.totalCents,
-      budgetCents,
-      actualBarPct: (s.totalCents / scale) * 100,
-      budgetBarPct: ((budgetCents ?? 0) / scale) * 100,
-      diff,
-    };
-  });
-}
-
-/** Total budget (sum of rows for current categories) and left to save (PRD P4). */
-export function planTotals(
-  categories: readonly string[],
-  nextBudgets: Record<string, number>,
-  expectedCents: number,
-): { totalCents: number; leftToSaveCents: number } {
-  const totalCents = categories.reduce((acc, c) => acc + (nextBudgets[c] ?? 0), 0);
-  return { totalCents, leftToSaveCents: expectedCents - totalCents };
-}
-
-/** Actuals per expense category, used by "Fill with {month} amounts" (PRD P5). */
-export function actualsByCategory(month: MonthData): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const s of categoryBreakdown(month, "Out")) out[s.name] = s.totalCents;
-  return out;
-}
 
 /** Live sample audit figures (PRD D7). */
 export function categoryTotal(month: MonthData, type: EntryType, category: string): number {

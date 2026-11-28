@@ -167,21 +167,18 @@ export const monthPlans = pgTable(
   ],
 );
 
-// ── budget_lines (one row per expense line within a plan) ────────────────────
-// EXPAND phase (ADR 0002): `categoryName` is still the key; `lineId` (a lib/plan.ts id such
-// as 'groceries') is written beside it. The contract ticket makes `lineId` the key and
-// drops `categoryName`.
+// ── budget_lines (one row per plan line within a plan; ADR 0002) ─────────────
+// `lineId` is a lib/plan.ts id such as 'groceries'.
 export const budgetLines = pgTable(
   'budget_lines',
   {
     userId: text('user_id').notNull(),
     monthKey: text('month_key').notNull(),
-    categoryName: text('category_name').notNull(),
-    lineId: text('line_id'),
+    lineId: text('line_id').notNull(),
     amountCents: integer('amount_cents').notNull(),
   },
   (t) => [
-    primaryKey({ columns: [t.userId, t.monthKey, t.categoryName] }),
+    primaryKey({ columns: [t.userId, t.monthKey, t.lineId] }),
     foreignKey({
       name: 'budget_lines_month_plan_fk',
       columns: [t.userId, t.monthKey],

@@ -79,8 +79,6 @@ export type MonthView =
       nextKey: string;
       month: MonthData;
       currency: DisplayCurrency;
-      /** Budgets set for this month (SGD cents by category name; legacy). */
-      budgets: Record<string, number>;
       /** This month's plan: budgets by plan line id. */
       plan: MonthPlan;
       /** Unused budget carried into this month, by plan line id. */
@@ -104,7 +102,6 @@ export function useMonthView(): MonthView {
     nextKey: nextOf(monthKey),
     month: bundle.month,
     currency: resolveCurrency(app.currency, app.rates),
-    budgets: bundle.budgets,
     plan: bundle.plan,
     carry: bundle.carry,
     nextCarry: bundle.nextCarry,

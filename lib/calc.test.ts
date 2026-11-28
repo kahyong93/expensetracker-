@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  actualsByCategory,
   actualsByLine,
   lineBreakdown,
   sectionCarry,
@@ -23,8 +22,6 @@ import {
   formatPct,
   merchantRanking,
   monthTotals,
-  planRows,
-  planTotals,
   shareDecimals,
   sumCents,
 } from "@/lib/calc";
@@ -209,12 +206,6 @@ describe("categories and breakdown", () => {
     expect(rows[0]).toMatchObject({ count: 0, totalCents: 0, sharePct: 0, budget: null });
   });
 
-  it("attaches budget status to expenses only", () => {
-    const m = month([entry("Out", "Food", "Lunch", 2500), entry("In", "Food", "Refund", 100)], ["Food"], ["Food"]);
-    expect(categoryBreakdown(m, "Out", { Food: 10000 })[0].budget).toMatchObject({ usePct: 25, over: false });
-    expect(categoryBreakdown(m, "In", { Food: 10000 })[0].budget).toBeNull();
-  });
-
   it("counts and totals one category", () => {
     const m = month([entry("Out", "Food", "A", 100), entry("Out", "Food", "B", 250), entry("In", "Food", "C", 999)]);
     expect(categoryCount(m, "Out", "Food")).toBe(2);
@@ -274,44 +265,6 @@ describe("filterEntries (PRD B2 search)", () => {
     const all = filterEntries(entries, "  ");
     expect(all).toEqual(entries);
     expect(all).not.toBe(entries);
-  });
-});
-
-describe("budget planner (PRD P2–P5)", () => {
-  const m = month(
-    [entry("Out", "Food", "A", 10000), entry("Out", "Bills", "B", 40000), entry("Out", "Fun", "C", 5000)],
-    ["Food", "Bills", "Fun", "Empty"],
-  );
-
-  it("compares each category's actual with next month's budget", () => {
-    const rows = planRows(m, { Food: 8000, Bills: 40000, Fun: 6000 });
-    expect(rows.map((r) => [r.name, r.diff])).toEqual([
-      ["Food", { kind: "less", cents: 2000 }],
-      ["Bills", { kind: "same" }],
-      ["Fun", { kind: "more", cents: 1000 }],
-      ["Empty", { kind: "none" }],
-    ]);
-  });
-
-  it("puts all bars on one scale (largest actual or budget)", () => {
-    const rows = planRows(m, { Food: 80000 });
-    expect(rows[0]).toMatchObject({ actualBarPct: 12.5, budgetBarPct: 100, budgetCents: 80000 });
-    expect(rows[1]).toMatchObject({ actualBarPct: 50, budgetBarPct: 0, budgetCents: null });
-  });
-
-  it("does not divide by zero for an empty month", () => {
-    const rows = planRows(month([], ["Food"]), {});
-    expect(rows[0]).toMatchObject({ actualBarPct: 0, budgetBarPct: 0 });
-  });
-
-  it("totals budgets for current categories only, and left to save", () => {
-    const budgets = { Food: 10000, Bills: 5000, Gone: 99999 };
-    expect(planTotals(["Food", "Bills", "Fun"], budgets, 20000)).toEqual({ totalCents: 15000, leftToSaveCents: 5000 });
-    expect(planTotals(["Food"], budgets, 0)).toEqual({ totalCents: 10000, leftToSaveCents: -10000 });
-  });
-
-  it("fills with actuals, including 0 for empty categories", () => {
-    expect(actualsByCategory(m)).toEqual({ Food: 10000, Bills: 40000, Fun: 5000, Empty: 0 });
   });
 });
 

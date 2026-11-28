@@ -31,8 +31,6 @@ export type CashflowPatch =
   /** Add (new temporary id) or replace (same id) an entry. */
   | { kind: "saveEntry"; entry: Entry }
   /** Next month's plan (Budget tab). */
-  | { kind: "setBudget"; category: string; cents: number | null }
-  | { kind: "replaceBudgets"; budgets: Record<string, number>; aiNote?: string }
   /** One plan line's budget by line id (null clears it). */
   | { kind: "setLineBudget"; lineId: string; cents: number | null }
   | { kind: "replaceLineBudgets"; budgets: Record<string, number> }
@@ -94,23 +92,6 @@ export function applyPatch(data: CashflowData, patch: CashflowPatch): CashflowDa
           return withCategoryInOrder({ ...m, entries }, patch.entry);
         }),
       );
-    case "setBudget":
-      return patchBundle(data, (b) => {
-        const budgets = { ...b.nextPlan.budgets };
-        if (patch.cents == null) delete budgets[patch.category];
-        else budgets[patch.category] = patch.cents;
-        return { ...b, nextPlan: { ...b.nextPlan, budgets } };
-      });
-    case "replaceBudgets":
-      return patchBundle(data, (b) => ({
-        ...b,
-        nextPlan: {
-          ...b.nextPlan,
-          budgets: { ...patch.budgets },
-          lines: {},
-          aiNote: patch.aiNote === undefined ? b.nextPlan.aiNote : patch.aiNote || null,
-        },
-      }));
     case "setLineBudget":
       return patchBundle(data, (b) => {
         const lines = { ...b.nextPlan.lines };
@@ -123,7 +104,7 @@ export function applyPatch(data: CashflowData, patch: CashflowPatch): CashflowDa
     case "setPlanPrefs":
       return { ...data, app: { ...data.app, planPrefs: patch.prefs } };
     case "clearBudgets":
-      return patchBundle(data, (b) => ({ ...b, nextPlan: { ...b.nextPlan, budgets: {}, lines: {}, aiNote: null } }));
+      return patchBundle(data, (b) => ({ ...b, nextPlan: { ...b.nextPlan, lines: {}, aiNote: null } }));
     case "setExpected":
       return patchBundle(data, (b) => ({ ...b, nextPlan: { ...b.nextPlan, expectedCents: patch.cents } }));
     case "setCurrency":

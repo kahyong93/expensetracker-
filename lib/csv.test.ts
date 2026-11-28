@@ -39,13 +39,18 @@ describe("buildMonthCsv (PRD X1)", () => {
     expect(csvFileName("Jan-25")).toBe("Jan-25_Cashflow.csv");
   });
 
-  it("writes a header, one row per entry, then next month's budgets", () => {
-    const csv = buildMonthCsv(month, resolveCurrency("USD"), { key: "Feb-25", budgets: { Food: 10000 } });
+  it("writes a header, one row per entry, then next month's budgets by section and line, in plan order", () => {
+    const csv = buildMonthCsv(month, resolveCurrency("USD"), {
+      key: "Feb-25",
+      budgets: { dining: 5000, groceries: 10000, rent: 80000, notaline: 1 },
+    });
     expect(csv.split("\r\n")).toEqual([
       '"Month","Type","Category","Item","Amount (SGD)","Amount (USD)","Note"',
       '"Jan-25","Out","Food","Kopi","1.20","0.92","\'=cmd"',
       '"Jan-25","In","Work","Salary","5000.00","3850.00",""',
-      '"Feb-25","Budget","Food","","100.00","77.00",""',
+      '"Feb-25","Budget","Basic Needs","Rent / mortgage","800.00","616.00",""',
+      '"Feb-25","Budget","Basic Needs","Groceries","100.00","77.00",""',
+      '"Feb-25","Budget","Entertainment","Dining out and food delivery","50.00","38.50",""',
     ]);
   });
 

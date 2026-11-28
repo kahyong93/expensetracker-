@@ -252,21 +252,6 @@ export function parsePlanPrefs(value: unknown): PlanPrefs | null {
   return { split: parsed as Split, carryMode: mode };
 }
 
-/** Category name → cents. Every name and amount must be valid. */
-export function parseBudgets(value: unknown): Record<string, number> | null {
-  if (!isRecord(value)) return null;
-  const out: Record<string, number> = {};
-  const entries = Object.entries(value);
-  if (entries.length > MAX_ENTRIES_PER_REQUEST) return null;
-  for (const [name, cents] of entries) {
-    const category = parseCategoryName(name);
-    const amount = parseCents(cents);
-    if (category == null || amount == null) return null;
-    out[category] = amount;
-  }
-  return out;
-}
-
 const CHAT_KEYS = ["role", "content"] as const;
 
 /**

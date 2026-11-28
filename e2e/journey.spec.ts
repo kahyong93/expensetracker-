@@ -416,7 +416,7 @@ test('P1-P9: next month budget saves per month key, fill and clear work', async 
   const food = page.getByLabel(`Food budget for ${NEXT} (S$)`);
   await food.fill('50');
   await food.press('Enter');
-  await expect.poll(async () => (await snapshot(ids.a)).plans.find((p) => p.monthKey === NEXT)?.budgetLines.map((l) => [l.categoryName, l.amountCents]))
+  await expect.poll(async () => (await snapshot(ids.a)).plans.find((p) => p.monthKey === NEXT)?.budgetLines.map((l) => [l.lineId, l.amountCents]))
     .toEqual([['Food', 5000]]);
   await expect(page.getByText('Total budget').locator('..')).toContainText('S$50.00');
 
@@ -430,7 +430,7 @@ test('P1-P9: next month budget saves per month key, fill and clear work', async 
   await toast(page, `Filled with ${THIS} amounts`);
   await expect.poll(async () => {
     const lines = (await snapshot(ids.a)).plans.find((p) => p.monthKey === NEXT)?.budgetLines ?? [];
-    return Object.fromEntries(lines.map((l) => [l.categoryName, l.amountCents]));
+    return Object.fromEntries(lines.map((l) => [l.lineId, l.amountCents]));
   }).toEqual({ Food: 1500 + 500 + 101, Transport: 0, 'Fixed & Bills': 0, 'Shopping & Insurance': 0, Coffee: 640 }); // every category, like the reference
 
   await page.getByRole('button', { name: 'Clear', exact: true }).click();

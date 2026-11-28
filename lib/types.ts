@@ -70,8 +70,6 @@ export type PlanPrefs = { split: Split; carryMode: CarryMode };
 
 /** Budgets, expected income and AI note for one month key (can exist before the month, PRD P8). */
 export type MonthPlan = {
-  /** Category name → budget in SGD cents (legacy key; removed with the contract ticket). */
-  budgets: Record<string, number>;
   /** Plan line id (lib/plan.ts) → budget in SGD cents. */
   lines: Record<string, number>;
   expectedCents: number | null;
@@ -81,8 +79,6 @@ export type MonthPlan = {
 /** Everything loaded for the month in the URL. */
 export type MonthBundle = {
   month: MonthData;
-  /** Budgets set for this month by category name (legacy key, used by the AI context). */
-  budgets: Record<string, number>;
   /** This month's plan: budgets by plan line id (progress bars on the dashboard and boards). */
   plan: MonthPlan;
   /** Unused budget carried into this month, by plan line id. */

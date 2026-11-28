@@ -73,13 +73,13 @@ lib/ai/{client,fake,prompts,schemas,parse,rate-limit}.ts  lib/db/*  lib/seed/jan
 ## 6. Data
 Normalized (3NF) schema in `db/schema.ts`, relations in `db/relations.ts`:
 ```
-users          id(Clerk userId) · currency · layout · showAudit · compactCards · autoCategorise · activeMonthId→months(set null)
+users          id(Clerk userId) · currency · layout · showAudit · compactCards · autoCategorise · splitNeeds/Invest/Fun · carryMode · activeMonthId→months(set null)
 currency_rates userId→users · code · rate                       PK(userId, code)   overrides only, never SGD
 months         id · userId→users · key · sortIndex(yyyymm) · isSample          unique(userId, key)
 categories     id · monthId→months · type(Out|In) · name · position             unique(monthId, type, lower(name))
-entries        id · categoryId→categories · label · amountCents · note · timestamps
+entries        id · categoryId→categories · label · amountCents · note · sectionId · lineId · timestamps
 month_plans    userId→users · monthKey · expectedIncomeCents · aiNote          PK(userId, monthKey)
-budget_lines   (userId, monthKey)→month_plans · categoryName · amountCents     PK(userId, monthKey, categoryName)
+budget_lines   (userId, monthKey)→month_plans · lineId · amountCents             PK(userId, monthKey, lineId)
 ai_insights    monthId→months · kind(summary|alerts|tips) · payload(jsonb)     PK(monthId, kind)
 ```
 All FKs cascade on delete, except `users.activeMonthId` (set null).
@@ -87,7 +87,7 @@ All FKs cascade on delete, except `users.activeMonthId` (set null).
 Normalization rules:
 - An entry's **month and type come from its category**. Entries don't store them. Moving an entry means changing `categoryId`, and the target category must be in the same month.
 - **Ownership:** `months`, `currency_rates` and `month_plans` have `userId`. For categories, entries and insights, scope by joining up to `months.userId`.
-- Expected income and the AI budget note live on `month_plans`. Budgets are its `budget_lines`, keyed by month key and category name so they can exist before the month (PRD P8).
+- Expected income and the AI budget note live on `month_plans`. Budgets are its `budget_lines`, keyed by month key and plan line id (`lib/plan.ts`, ADR 0002) so they can exist before the month (PRD P8). `sectionId`/`lineId` on expenses are those same plan ids; income has none.
 - Delete an empty category only (B11) with a single guarded statement (`… AND NOT EXISTS (SELECT 1 FROM entries …)`). `neon-http` has no interactive transactions, so use single statements or `db.batch`.
 - Schema changes: edit `db/schema.ts`, then run `npm run db:push`. It applies the difference straight to the database and has no migration history, so never mix it with `drizzle-kit migrate`. Try risky changes on a Neon dev branch first (`neon branches create`), and read push's prompts before accepting anything that drops data.
 

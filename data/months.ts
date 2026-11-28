@@ -40,15 +40,11 @@ export async function getLatestMonthKey(): Promise<string | null> {
 }
 
 function toPlan(
-  row: { expectedIncomeCents: number | null; aiNote: string | null; budgetLines: { categoryName: string; lineId: string | null; amountCents: number }[] } | undefined,
+  row: { expectedIncomeCents: number | null; aiNote: string | null; budgetLines: { lineId: string; amountCents: number }[] } | undefined,
 ): MonthPlan {
-  const budgets: Record<string, number> = {};
   const lines: Record<string, number> = {};
-  for (const line of row?.budgetLines ?? []) {
-    budgets[line.categoryName] = line.amountCents;
-    if (line.lineId) lines[line.lineId] = line.amountCents;
-  }
-  return { budgets, lines, expectedCents: row?.expectedIncomeCents ?? null, aiNote: row?.aiNote || null };
+  for (const line of row?.budgetLines ?? []) lines[line.lineId] = line.amountCents;
+  return { lines, expectedCents: row?.expectedIncomeCents ?? null, aiNote: row?.aiNote || null };
 }
 
 /**
@@ -71,7 +67,7 @@ async function loadCarry(userId: string, key: string, nextKey: string): Promise<
   const budgetsByKey = new Map<string, Record<string, number>>();
   for (const p of plans) {
     const budgets: Record<string, number> = {};
-    for (const l of p.budgetLines) if (l.lineId) budgets[l.lineId] = l.amountCents;
+    for (const l of p.budgetLines) budgets[l.lineId] = l.amountCents;
     if (Object.keys(budgets).length > 0 && p.monthKey !== key && p.monthKey !== nextKey) budgetsByKey.set(p.monthKey, budgets);
   }
   if (budgetsByKey.size === 0) return { carry: NO_CARRY, nextCarry: NO_CARRY };
@@ -132,7 +128,7 @@ export async function getMonthBundle(key: string): Promise<MonthBundle | null> {
     db.query.monthPlans.findMany({
       where: { userId, monthKey: { in: [key, nextKey] } },
       columns: { monthKey: true, expectedIncomeCents: true, aiNote: true },
-      with: { budgetLines: { columns: { categoryName: true, lineId: true, amountCents: true } } },
+      with: { budgetLines: { columns: { lineId: true, amountCents: true } } },
     }),
     loadCarry(userId, key, nextKey),
   ]);
@@ -177,7 +173,6 @@ export async function getMonthBundle(key: string): Promise<MonthBundle | null> {
       inOrder: month.categories.filter((c) => c.type === 'In').map((c) => c.name),
       entries: rows.map((r) => r.entry),
     },
-    budgets: toPlan(plans.find((p) => p.monthKey === key)).budgets,
     plan: toPlan(plans.find((p) => p.monthKey === key)),
     carry: carryInfo.carry,
     nextCarry: carryInfo.nextCarry,

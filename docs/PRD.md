@@ -169,7 +169,7 @@ On phone, several dashboard and board elements are reduced or hidden. That list 
 | ID | Requirement | P |
 |---|---|---|
 | P1 | Title "Budget for {next month}", with the explainer: "Set a limit per category, using {month} spending as a guide. When you create {next}, these limits appear as progress bars on its dashboard and board." | P0 |
-| P2 | One row per expense category: name, this month's spend, a budget input (placeholder = this month's spend), a comparison bar pair (actual grey, budget in colour, same scale), and a difference line: "Same as {month}" / "S$x less than {month}" / "S$x more than {month}" / "No budget set yet". | P0 |
+| P2 | One row per plan line, grouped under its section (Basic Needs, Investment / Savings, Entertainment): name and hint, this month's spend (expenses with that saved line), a budget input (placeholder = this month's spend), a comparison bar pair (actual grey, budget in colour, same scale), and a difference line: "Same as {month}" / "S$x less than {month}" / "S$x more than {month}" / "No budget set yet". | P0 |
 | P3 | **Expected income** input. It defaults to this month's income and saves per next month. | P0 |
 | P4 | **Total budget** (sum of rows) and **Left to save** (expected − total), updated live. | P0 |
 | P5 | **Fill with {month} amounts** copies actuals into all rows. | P0 |
@@ -186,7 +186,7 @@ All AI runs on the server, using only the signed-in user's data for the active m
 | AI-1 | **Auto-categorise** | Add item modal | "✦ Suggest" button next to Category. It also runs automatically when the item name loses focus on a **new** item if: the setting is on, the user hasn't picked a category, and the name changed since the last suggestion. It picks an existing category (case-insensitive match) or proposes a new one (fills "+ New category…"). Toast: "Suggested category: {name}". | P0 |
 | AI-2 | **Ask your money** | AI tab | A chat about the active month. Empty state shows four suggestions: "How much did I spend on Uniqlo?", "Can I afford a {sym}300 trip next month?", "What was my biggest expense?", "How much did food cost per day?". Enter sends. A "Thinking…" bubble shows while waiting. Replies are plain text under 120 words. "Clear" resets. History is kept for the session only. | P0 |
 | AI-3 | **Monthly summary** | AI tab card | Generate → a headline plus 3 points: biggest driver, savings result, one notable pattern. Saved per month. "Refresh" regenerates. | P0 |
-| AI-4 | **Smart budget suggestions** | Budget tab | Suggests a budget for each existing expense category for next month, treating one-off or annual items (e.g. large insurance) as non-recurring, and taking expected income into account. Fills the rows (editable), stores a one or two sentence "AI note" shown under the buttons, and toasts "AI budget filled in. Edit any number." | P0 |
+| AI-4 | **Smart budget suggestions** | Budget tab | Suggests a budget for every plan line for next month, using the split targets, treating one-off or annual items (e.g. large insurance) as non-recurring, and taking expected income into account. Fills the rows (editable), stores a one or two sentence "AI note" shown under the buttons, and toasts "AI budget filled in. Edit any number." | P0 |
 | AI-5 | **Spending alerts** | AI tab card | 2–4 noteworthy items: one-off spikes, small repeated spends that add up, categories over budget. Saved per month. | P0 |
 | AI-6 | **Paste to add** | AI tab | Textarea for a bank SMS, receipt or list → "Read it" → a preview list of extracted entries (type, category chip, item, amount; income shown with "+"). Each row can be removed. "Discard" or "Add {n} entries to {month}" saves them. New categories are created as needed. Nothing is saved before confirmation. Max 4,000 characters. | P0 |
 | AI-7 | **Savings tips** | AI tab card | 3 practical tips tied to specific merchants or categories, each with an estimated monthly saving. Saved per month. | P0 |
@@ -270,7 +270,7 @@ The UI must match the approved prototype. Visuals, breakpoints (phone < 720px, t
 
 ## 11. Data model
 
-The schema is defined in `CLAUDE.md` §6. Product rule: budgets and expected income attach to a month **label**, so they can be planned before the month exists (P8).
+The schema is defined in `CLAUDE.md` §6. Product rule: budgets (by plan line id) and expected income attach to a month **label**, so they can be planned before the month exists (P8).
 
 ## 12. Analytics (privacy-safe, no amounts or item names)
 
@@ -334,6 +334,6 @@ Use these to check the success metrics below.
 - **Category:** a column on a board. Expense and income categories are separate.
 - **Month:** a labelled period such as `Jan-25`, holding its own entries and categories.
 - **Board:** the drag-and-drop column view for Expenses or Income.
-- **Budget:** a planned limit per expense category for a month.
+- **Budget:** a planned amount per plan line (see `GLOSSARY.md`) for a month.
 - **Expected income:** the income assumed when planning a month's budget.
 - **Base currency:** SGD. Everything is stored in it.

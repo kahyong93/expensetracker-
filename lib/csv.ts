@@ -3,6 +3,7 @@
  * = + - @ with ' to stop formula injection.
  */
 import { centsToInput, type DisplayCurrency } from "@/lib/money";
+import { getSection, PLAN_LINES } from "@/lib/plan";
 import type { MonthData } from "@/lib/types";
 
 export function csvCell(value: string): string {
@@ -17,6 +18,7 @@ export function csvFileName(monthKey: string): string {
 export function buildMonthCsv(
   month: MonthData,
   currency: DisplayCurrency,
+  /** Next month's budgets in cents, by plan line id. */
   next: { key: string; budgets: Record<string, number> },
 ): string {
   const rows: string[][] = [
@@ -30,13 +32,14 @@ export function buildMonthCsv(
       centsToInput(e.amountCents, currency),
       e.note,
     ]),
-    ...Object.entries(next.budgets).map(([category, cents]) => [
+    // One row per budgeted line, in plan order: the section is the category, the line is the item.
+    ...PLAN_LINES.filter((l) => next.budgets[l.id] != null).map((l) => [
       next.key,
       "Budget",
-      category,
-      "",
-      centsToInput(cents),
-      centsToInput(cents, currency),
+      getSection(l.sectionId)?.title ?? "",
+      l.name,
+      centsToInput(next.budgets[l.id]),
+      centsToInput(next.budgets[l.id], currency),
       "",
     ]),
   ];

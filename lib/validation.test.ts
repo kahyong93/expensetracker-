@@ -4,7 +4,6 @@ import {
   LIMITS,
   MAX_ENTRIES_PER_REQUEST,
   parseAiNote,
-  parseBudgets,
   parseCategoryName,
   parseCents,
   parseChatMessages,
@@ -213,21 +212,6 @@ describe("parseEntryInput (untrusted Server Action input)", () => {
     expect(parseEntryInputs(Array.from({ length: MAX_ENTRIES_PER_REQUEST + 1 }, () => valid))).toBeNull();
     expect(parseEntryInputs([valid, { ...valid, amountCents: -1 }])).toBeNull();
     expect(parseEntryInputs(valid)).toBeNull();
-  });
-});
-
-describe("parseBudgets", () => {
-  it("accepts category → cents and trims names", () => {
-    expect(parseBudgets({ " Food ": 10000, Bills: 0 })).toEqual({ Food: 10000, Bills: 0 });
-    expect(parseBudgets({})).toEqual({});
-  });
-
-  it("rejects bad names, amounts and shapes", () => {
-    expect(parseBudgets({ Food: -1 })).toBeNull();
-    expect(parseBudgets({ Food: "100" })).toBeNull();
-    expect(parseBudgets({ "": 100 })).toBeNull();
-    expect(parseBudgets([100])).toBeNull();
-    expect(parseBudgets(null)).toBeNull();
   });
 });
 

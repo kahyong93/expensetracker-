@@ -18,11 +18,10 @@ function data(): CashflowData {
     },
     bundle: {
       month: { key: "Jan-25", entries: [kopi, bus], outOrder: ["Food", "Transport"], inOrder: ["Work"], isSample: false },
-      budgets: {},
-      plan: { budgets: {}, lines: {}, expectedCents: null, aiNote: null },
+      plan: { lines: {}, expectedCents: null, aiNote: null },
       carry: { byLine: {}, sources: [] },
       nextCarry: { byLine: {}, sources: [] },
-      nextPlan: { budgets: { Food: 5000 }, lines: { groceries: 5000 }, expectedCents: null, aiNote: "Keep it up" },
+      nextPlan: { lines: { groceries: 5000 }, expectedCents: null, aiNote: "Keep it up" },
       insights: {},
     },
   };
@@ -42,7 +41,7 @@ describe("applyPatch", () => {
     const original = data();
     const snapshot = structuredClone(original);
     applyPatch(original, { kind: "deleteEntry", id: "a" });
-    applyPatch(original, { kind: "setBudget", category: "Food", cents: null });
+    applyPatch(original, { kind: "setLineBudget", lineId: "groceries", cents: null });
     applyPatch(original, { kind: "setSettings", settings: { compactCards: true } });
     expect(original).toEqual(snapshot);
   });
@@ -78,25 +77,9 @@ describe("applyPatch", () => {
     expect(next.bundle?.month.outOrder).toEqual(["Food", "Transport"]);
   });
 
-  it("sets and removes a budget line", () => {
-    const set = applyPatch(data(), { kind: "setBudget", category: "Transport", cents: 3000 });
-    expect(set.bundle?.nextPlan.budgets).toEqual({ Food: 5000, Transport: 3000 });
-    const removed = applyPatch(data(), { kind: "setBudget", category: "Food", cents: null });
-    expect(removed.bundle?.nextPlan.budgets).toEqual({});
-  });
-
-  it("replaces budgets, keeping the AI note unless one is given", () => {
-    const kept = applyPatch(data(), { kind: "replaceBudgets", budgets: { Transport: 100 } });
-    expect(kept.bundle?.nextPlan).toMatchObject({ budgets: { Transport: 100 }, aiNote: "Keep it up" });
-    const cleared = applyPatch(data(), { kind: "replaceBudgets", budgets: {}, aiNote: "" });
-    expect(cleared.bundle?.nextPlan.aiNote).toBeNull();
-    const fresh = applyPatch(data(), { kind: "replaceBudgets", budgets: {}, aiNote: "New" });
-    expect(fresh.bundle?.nextPlan.aiNote).toBe("New");
-  });
-
   it("clears budgets and the AI note", () => {
     const next = applyPatch(data(), { kind: "clearBudgets" });
-    expect(next.bundle?.nextPlan).toMatchObject({ budgets: {}, aiNote: null });
+    expect(next.bundle?.nextPlan).toMatchObject({ lines: {}, aiNote: null });
   });
 
   it("sets expected income", () => {
