@@ -29,7 +29,8 @@ import {
 export const currencyCode = pgEnum('currency_code', ['SGD', 'USD', 'INR', 'MYR', 'EUR', 'GBP']);
 export const layoutMode = pgEnum('layout_mode', ['auto', 'phone', 'laptop']);
 export const entryType = pgEnum('entry_type', ['Out', 'In']);
-export const insightKind = pgEnum('insight_kind', ['summary', 'alerts', 'tips']);
+export const carryModeEnum = pgEnum('carry_mode', ['off', 'last', 'cum']);
+export const insightKind =pgEnum('insight_kind', ['summary', 'alerts', 'tips']);
 
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
 const updatedAt = () =>
@@ -46,6 +47,12 @@ export const users = pgTable('users', {
   showAudit: boolean('show_audit').notNull().default(true),
   compactCards: boolean('compact_cards').notNull().default(false),
   autoCategorise: boolean('auto_categorise').notNull().default(true),
+  // Target share of expected income per section, in percent (reference `split`).
+  splitNeeds: integer('split_needs').notNull().default(50),
+  splitInvest: integer('split_invest').notNull().default(20),
+  splitFun: integer('split_fun').notNull().default(30),
+  // How unused budget carries into later months (reference `carry`).
+  carryMode: carryModeEnum('carry_mode').notNull().default('cum'),
   // Last opened month. The URL is the source of truth; this is only a fallback.
   activeMonthId: uuid('active_month_id').references((): AnyPgColumn => months.id, {
     onDelete: 'set null',
@@ -125,11 +132,15 @@ export const entries = pgTable(
     label: text('label').notNull(), // item / merchant / source
     amountCents: integer('amount_cents').notNull(), // SGD cents
     note: text('note'),
+    // Budget plan ids (lib/plan.ts); null for income and for expenses not yet assigned.
+    sectionId: text('section_id'),
+    lineId: text('line_id'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
     index('entries_category_idx').on(t.categoryId),
+    check('entries_line_needs_section', sql`${t.lineId} IS NULL OR ${t.sectionId} IS NOT NULL`),
     check('entries_amount_non_negative', sql`${t.amountCents} >= 0`),
     check('entries_label_not_blank', sql`length(trim(${t.label})) > 0`),
   ],
@@ -156,13 +167,17 @@ export const monthPlans = pgTable(
   ],
 );
 
-// ── budget_lines (per expense category name within a plan) ───────────────────
+// ── budget_lines (one row per expense line within a plan) ────────────────────
+// EXPAND phase (ADR 0002): `categoryName` is still the key; `lineId` (a lib/plan.ts id such
+// as 'groceries') is written beside it. The contract ticket makes `lineId` the key and
+// drops `categoryName`.
 export const budgetLines = pgTable(
   'budget_lines',
   {
     userId: text('user_id').notNull(),
     monthKey: text('month_key').notNull(),
     categoryName: text('category_name').notNull(),
+    lineId: text('line_id'),
     amountCents: integer('amount_cents').notNull(),
   },
   (t) => [
