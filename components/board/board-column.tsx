@@ -62,9 +62,10 @@ export function BoardColumn({
   onMove: (entry: Entry, category: string) => void;
   onEdit: (entry: Entry) => void;
   onDelete: (entry: Entry) => void;
-  onAdd: () => void;
-  onRename: () => void;
-  onRemove: () => void;
+  /** Omitted for Unassigned, which cannot take new items. */
+  onAdd?: () => void;
+  onRename?: () => void;
+  onRemove?: () => void;
 }) {
   const baseId = useId();
   const nameId = `${baseId}-name`;
@@ -144,13 +145,15 @@ export function BoardColumn({
               </div>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onAdd}
-            className={cn(FOOTER_BUTTON, "p-2.5 text-cf-ink-soft hover:bg-cf-bg", isPhone && "min-h-11")}
-          >
-            {BOARD_COPY.addTo(stat.name)}
-          </button>
+          {onAdd ? (
+            <button
+              type="button"
+              onClick={onAdd}
+              className={cn(FOOTER_BUTTON, "p-2.5 text-cf-ink-soft hover:bg-cf-bg", isPhone && "min-h-11")}
+            >
+              {BOARD_COPY.addTo(stat.name)}
+            </button>
+          ) : null}
         </>
       ) : null}
 

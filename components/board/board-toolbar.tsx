@@ -44,9 +44,11 @@ export function BoardToolbar({
           onChange={(e) => onSearchChange(e.target.value)}
           autoComplete="off"
         />
-        <Button variant="outline" size="md" onClick={onNewCategory}>
-          {BOARD_COPY.newCategoryButton}
-        </Button>
+        {type === "In" ? (
+          <Button variant="outline" size="md" onClick={onNewCategory}>
+            {BOARD_COPY.newCategoryButton}
+          </Button>
+        ) : null}
       </div>
     </section>
   );

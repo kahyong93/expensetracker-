@@ -28,8 +28,9 @@ export function ColumnHeader({
   decimals: number;
   currency: DisplayCurrency;
   isPhone: boolean;
-  onRename: () => void;
-  onRemove: () => void;
+  /** Income columns can be renamed and removed; the fixed Expenses lines cannot. */
+  onRename?: () => void;
+  onRemove?: () => void;
 }) {
   const { budget } = stat;
   const iconHit = isPhone ? "min-h-11 min-w-11" : undefined;
@@ -50,6 +51,7 @@ export function ColumnHeader({
             <span className="sr-only"> items</span>
           </Tag>
         </div>
+        {onRename && onRemove ? (
         <div className="flex shrink-0 gap-0.5">
           <Button
             variant="icon"
@@ -72,6 +74,7 @@ export function ColumnHeader({
             <CloseIcon />
           </Button>
         </div>
+        ) : null}
       </div>
       <div className="flex items-baseline justify-between gap-1.5">
         <span className="font-heading text-[22px] font-semibold">{formatMoney(stat.totalCents, currency)}</span>

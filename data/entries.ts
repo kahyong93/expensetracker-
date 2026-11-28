@@ -127,6 +127,30 @@ export async function deleteEntry(entryId: string): Promise<ActionResult> {
 }
 
 /**
+ * Move an expense to a plan line (Expenses board drag and drop, "Move to…"). The entry takes
+ * the line's section and line ids and moves to the month's column named like the line,
+ * created if needed.
+ */
+export async function moveEntryToLine(entryId: string, lineId: string): Promise<ActionResult> {
+  const userId = await requireUserId();
+  const line = getLine(lineId);
+  if (!line) return CATEGORY_NOT_FOUND;
+  const entry = await findOwnedEntry(userId, entryId);
+  if (!entry || entry.category.type !== 'Out') return ENTRY_NOT_FOUND;
+
+  const find = await resolveCategories(userId, entry.category.monthId, [{ type: 'Out', name: line.name }]);
+  const target = find('Out', line.name);
+  if (!target) return CATEGORY_NOT_FOUND;
+
+  const moved = await db
+    .update(entries)
+    .set({ categoryId: target.id, sectionId: line.sectionId, lineId: line.id })
+    .where(and(eq(entries.id, entryId), inArray(entries.categoryId, ownedCategoryIds(userId))))
+    .returning({ id: entries.id });
+  return moved.length > 0 ? ok(undefined) : ENTRY_NOT_FOUND;
+}
+
+/**
  * Move an entry to another existing category of the same month and type (PRD B5/B6:
  * drag and drop, "Move to…").
  */

@@ -3,7 +3,7 @@
  * Every amount in and out is integer SGD cents.
  */
 import { categoryColor } from "@/lib/design/palette";
-import { getSection, PLAN, PLAN_LINES, type SectionId, type Split } from "@/lib/plan";
+import { getSection, PLAN, PLAN_LINES, UNASSIGNED, type SectionId, type Split } from "@/lib/plan";
 import type { Entry, EntryType, MonthData } from "@/lib/types";
 
 export function sumCents(entries: readonly Entry[]): number {
@@ -378,4 +378,66 @@ export function planLineTotals(
 ): { totalCents: number; leftToSaveCents: number } {
   const totalCents = PLAN_LINES.reduce((acc, l) => acc + (lineBudgets[l.id] ?? 0), 0);
   return { totalCents, leftToSaveCents: expectedCents - totalCents };
+}
+
+/** Board column key of expenses that have no plan line yet. */
+export const UNASSIGNED_KEY = "__unassigned";
+
+export type LineStat = CategoryStat & {
+  /** Column key: the plan line id, or UNASSIGNED_KEY. */
+  key: string;
+  lineId: string | null;
+  sectionId: SectionId | null;
+};
+
+/**
+ * Expenses board columns (PRD §7.10 S2): one per plan line in budget-page order, then
+ * Unassigned when some expenses have no line. Budgets are looked up by the line's name
+ * until the dashboard and boards read plans by line id.
+ */
+export function lineBreakdown(month: MonthData, budgetsByName: Record<string, number> = {}): LineStat[] {
+  const entries = entriesOfType(month, "Out");
+  const typeTotal = sumCents(entries);
+  const stat = (
+    key: string,
+    name: string,
+    index: number,
+    items: Entry[],
+    colors: { solid: string; tint: string },
+    lineId: string | null,
+    sectionId: SectionId | null,
+  ): LineStat => {
+    const totalCents = sumCents(items);
+    const budgetCents = lineId ? budgetsByName[name] : undefined;
+    return {
+      key,
+      name,
+      index,
+      color: colors.solid,
+      tint: colors.tint,
+      count: items.length,
+      totalCents,
+      sharePct: typeTotal ? (totalCents / typeTotal) * 100 : 0,
+      budget: budgetCents == null ? null : budgetStatus(totalCents, budgetCents),
+      lineId,
+      sectionId,
+    };
+  };
+  const stats = PLAN_LINES.map((line, index) => {
+    const section = getSection(line.sectionId);
+    return stat(
+      line.id,
+      line.name,
+      index,
+      entries.filter((e) => e.lineId === line.id),
+      { solid: section?.color ?? "", tint: section?.tint ?? "" },
+      line.id,
+      line.sectionId,
+    );
+  });
+  const unassigned = entries.filter((e) => !e.lineId);
+  if (unassigned.length > 0) {
+    stats.push(stat(UNASSIGNED_KEY, UNASSIGNED, PLAN_LINES.length, unassigned, categoryColor(PLAN_LINES.length), null, null));
+  }
+  return stats;
 }

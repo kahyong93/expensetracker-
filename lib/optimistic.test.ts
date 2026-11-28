@@ -130,4 +130,11 @@ describe("applyPatch", () => {
     const prefs = { split: { needs: 40, invest: 30, fun: 30 }, carryMode: "last" as const };
     expect(applyPatch(data(), { kind: "setPlanPrefs", prefs }).app.planPrefs).toEqual(prefs);
   });
+
+  it("moves an expense to a plan line and takes the line's section and name", () => {
+    const next = applyPatch(data(), { kind: "moveEntryToLine", id: "a", lineId: "dining" });
+    const moved = next.bundle?.month.entries.find((e) => e.id === "a");
+    expect(moved).toMatchObject({ category: "Dining out and food delivery", sectionId: "fun", lineId: "dining" });
+    expect(next.bundle?.month.outOrder).toContain("Dining out and food delivery");
+  });
 });

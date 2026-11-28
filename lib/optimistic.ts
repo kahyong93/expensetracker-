@@ -5,6 +5,7 @@
  * dropped on error, which is the rollback).
  */
 import type { CurrencyCode } from "@/lib/money";
+import { getLine } from "@/lib/plan";
 import type { CashflowData, Entry, LayoutPref, MonthBundle, MonthData, PlanPrefs, Settings } from "@/lib/types";
 
 const PENDING_ID_PREFIX = "pending-";
@@ -24,6 +25,8 @@ export function isPendingEntry(entry: Pick<Entry, "id">): boolean {
 
 export type CashflowPatch =
   | { kind: "moveEntry"; id: string; category: string }
+  /** An expense moves to a plan line (Expenses board). */
+  | { kind: "moveEntryToLine"; id: string; lineId: string }
   | { kind: "deleteEntry"; id: string }
   /** Add (new temporary id) or replace (same id) an entry. */
   | { kind: "saveEntry"; entry: Entry }
@@ -65,6 +68,18 @@ export function applyPatch(data: CashflowData, patch: CashflowPatch): CashflowDa
           entries: m.entries.map((e) => (e.id === patch.id ? { ...e, category: patch.category } : e)),
         })),
       );
+    case "moveEntryToLine": {
+      const line = getLine(patch.lineId);
+      if (!line) return data;
+      return patchBundle(data, (b) =>
+        patchMonth(b, (m) => {
+          const target = m.entries.find((e) => e.id === patch.id);
+          if (!target) return m;
+          const moved: Entry = { ...target, category: line.name, sectionId: line.sectionId, lineId: line.id };
+          return withCategoryInOrder({ ...m, entries: m.entries.map((e) => (e.id === patch.id ? moved : e)) }, moved);
+        }),
+      );
+    }
     case "deleteEntry":
       return patchBundle(data, (b) =>
         patchMonth(b, (m) => ({ ...m, entries: m.entries.filter((e) => e.id !== patch.id) })),

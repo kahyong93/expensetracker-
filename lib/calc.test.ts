@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   actualsByCategory,
   actualsByLine,
+  lineBreakdown,
+  UNASSIGNED_KEY,
   planLineRows,
   planLineTotals,
   sectionPlans,
@@ -369,5 +371,18 @@ describe("budget plan by line", () => {
 
   it("totals the plan and what is left to save", () => {
     expect(planLineTotals({ rent: 60000, stocks: 5000 }, 100000)).toEqual({ totalCents: 65000, leftToSaveCents: 35000 });
+  });
+
+  it("builds expense board columns per line, with Unassigned last and only when needed", () => {
+    const m = month([spend("a", 800, "groceries"), spend("b", 200, "groceries"), spend("c", 1000, "rent")]);
+    const stats = lineBreakdown(m, { Groceries: 2000 });
+    expect(stats).toHaveLength(23);
+    expect(stats[0]).toMatchObject({ key: "rent", name: "Rent / mortgage", count: 1, totalCents: 1000, sharePct: 50 });
+    expect(stats.find((s) => s.key === "groceries")).toMatchObject({ count: 2, totalCents: 1000, budget: { over: false } });
+    expect(stats.at(-1)?.key).not.toBe(UNASSIGNED_KEY);
+
+    const withUnassigned = lineBreakdown(month([spend("d", 90, null)]));
+    expect(withUnassigned).toHaveLength(24);
+    expect(withUnassigned.at(-1)).toMatchObject({ key: UNASSIGNED_KEY, name: "Unassigned", count: 1, lineId: null, sectionId: null });
   });
 });

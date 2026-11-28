@@ -2,7 +2,7 @@
 
 import * as entriesData from '@/data/entries';
 import type { ActionResult, EntryInput } from '@/lib/types';
-import { parseCategoryName, parseEntryInput, parseEntryInputs, parseId, parseMonthLabel } from '@/lib/validation';
+import { parseCategoryName, parseEntryInput, parseEntryInputs, parseId, parseLineId, parseMonthLabel } from '@/lib/validation';
 import { INVALID, runAction } from './run-action';
 
 /*
@@ -42,6 +42,16 @@ export async function deleteEntryAction(entryId: string): Promise<ActionResult> 
     const id = parseId(entryId);
     if (!id) return INVALID;
     return entriesData.deleteEntry(id);
+  });
+}
+
+/** Expenses board: move an expense to a plan line. */
+export async function moveEntryToLineAction(entryId: string, lineId: string): Promise<ActionResult> {
+  return runAction(async () => {
+    const id = parseId(entryId);
+    const line = parseLineId(lineId);
+    if (!id || !line) return INVALID;
+    return entriesData.moveEntryToLine(id, line);
   });
 }
 
