@@ -1,7 +1,7 @@
 import 'server-only';
 import { db } from '@/db';
 import { currencyRates, users } from '@/db/schema';
-import { CARRY_DEFAULT, SPLIT_DEFAULT } from '@/lib/plan';
+import { DEFAULT_PLAN_PREFS } from '@/lib/plan';
 import type { CurrencyCode } from '@/lib/money';
 import type { AppData, LayoutPref, PlanPrefs } from '@/lib/types';
 import { requireUserId } from './auth';
@@ -11,7 +11,7 @@ const DEFAULTS = {
   currency: 'SGD',
   layout: 'auto',
   settings: { autoCategorise: true, compactCards: false, showAudit: true },
-  planPrefs: { split: SPLIT_DEFAULT, carryMode: CARRY_DEFAULT },
+  planPrefs: DEFAULT_PLAN_PREFS,
 } as const satisfies Omit<AppData, 'monthKeys' | 'rates'>;
 
 /** Settings, rate overrides and month list for the signed-in user. */
@@ -53,7 +53,7 @@ export async function getAppData(): Promise<AppData> {
       : { ...DEFAULTS.settings },
     planPrefs: user
       ? { split: { needs: user.splitNeeds, invest: user.splitInvest, fun: user.splitFun }, carryMode: user.carryMode }
-      : { split: { ...SPLIT_DEFAULT }, carryMode: CARRY_DEFAULT },
+      : { split: { ...DEFAULT_PLAN_PREFS.split }, carryMode: DEFAULT_PLAN_PREFS.carryMode },
   };
 }
 

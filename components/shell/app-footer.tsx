@@ -37,7 +37,7 @@ export function AppFooter() {
   const reset = async () => {
     const ok = await confirm({
       title: "Reset to the Jan-25 sheet?",
-      text: "This restores all 66 expense items and 7 income items to their original categories.",
+      text: "This restores all 66 expense items and 7 income items to their original categories. Your budgets, AI budget note, split targets and carry-over setting go back to the defaults.",
       ok: "Reset",
     });
     if (!ok) return;

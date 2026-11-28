@@ -87,6 +87,12 @@ export type CarryMode = "off" | "last" | "cum";
 export const CARRY_MODES: readonly CarryMode[] = ["off", "last", "cum"];
 export const CARRY_DEFAULT: CarryMode = "cum";
 
+/** Split and carry as a new account has them, and as Reset to sample data restores them. */
+export const DEFAULT_PLAN_PREFS: { split: Split; carryMode: CarryMode } = {
+  split: SPLIT_DEFAULT,
+  carryMode: CARRY_DEFAULT,
+};
+
 // ── Keyword backfill (reference mapEntry / MAP_RULES) ───────────────────────
 const MAP_RULES: readonly (readonly [RegExp, string])[] = [
   [/parent|allowance|family/i, "family"], [/\brent|rental|mortgage/i, "rent"],

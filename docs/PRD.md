@@ -215,7 +215,7 @@ Settings are reached from a small settings entry in the header, styled per DESIG
 | ID | Requirement | P |
 |---|---|---|
 | X1 | **Export CSV** of the active month, file `{month}_Cashflow.csv`. Columns: Month, Type, Category, Item, Amount (SGD), Amount ({currency}), Note. Next month budget rows are appended as type "Budget". Toast: "Exported {file}". | P0 |
-| X2 | **Reset to sample data:** confirms, then restores the Jan-25 sample month (66 expenses, 7 income) to its original state. Other months are untouched. Toast: "Restored Jan-25 data". | P1 |
+| X2 | **Reset to sample data:** confirms, then restores the Jan-25 sample month (66 expenses, 7 income) to its original state, with each expense in its section and line. All budgets, expected income and AI budget notes are cleared, and split and carry-over go back to 50/20/30 and cumulative. Other months are untouched. Toast: "Restored Jan-25 data". | P1 |
 
 ---
 

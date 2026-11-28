@@ -2,9 +2,9 @@ import 'server-only';
 import { and, eq, inArray } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
 import { db } from '@/db';
-import { aiInsights, categories, entries, months } from '@/db/schema';
+import { aiInsights, categories, entries, monthPlans, months, users } from '@/db/schema';
 import { carryInto, NO_CARRY, type CarryInfo, type MonthSnapshot } from '@/lib/carry';
-import { CARRY_DEFAULT, placeEntry } from '@/lib/plan';
+import { CARRY_DEFAULT, DEFAULT_PLAN_PREFS, placeEntry } from '@/lib/plan';
 import { isMonthKey, monthKeyOf, monthSortIndex, nextOf } from '@/lib/months';
 import {
   DEFAULT_IN_CATEGORIES,
@@ -286,7 +286,7 @@ export async function startFresh(): Promise<ActionResult<{ key: string }>> {
 
 /**
  * Load the Jan-25 sample (PRD A3), or restore it to its original state (PRD X2).
- * Other months, and budgets keyed by month, are untouched.
+ * Other months are untouched; plans, split and carry are reset (PRD S7).
  */
 export async function loadSampleMonth(): Promise<ActionResult<{ key: string }>> {
   const userId = await requireUserId();
@@ -302,6 +302,18 @@ export async function loadSampleMonth(): Promise<ActionResult<{ key: string }>> 
       // Deleting the categories cascades to their entries.
       db.delete(categories).where(and(eq(categories.monthId, existing.id), owned)),
       db.delete(aiInsights).where(and(eq(aiInsights.monthId, existing.id), inArray(aiInsights.monthId, ownedMonthIds(userId)))),
+      // PRD S7: Reset also clears every plan (budgets cascade, with expected income and the AI
+      // note) and puts split and carry back to their defaults.
+      db.delete(monthPlans).where(eq(monthPlans.userId, userId)),
+      db
+        .update(users)
+        .set({
+          splitNeeds: DEFAULT_PLAN_PREFS.split.needs,
+          splitInvest: DEFAULT_PLAN_PREFS.split.invest,
+          splitFun: DEFAULT_PLAN_PREFS.split.fun,
+          carryMode: DEFAULT_PLAN_PREFS.carryMode,
+        })
+        .where(eq(users.id, userId)),
       ...contentInserts(existing.id, contents),
     ];
     await db.batch(batch);
