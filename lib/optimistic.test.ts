@@ -19,6 +19,9 @@ function data(): CashflowData {
     bundle: {
       month: { key: "Jan-25", entries: [kopi, bus], outOrder: ["Food", "Transport"], inOrder: ["Work"], isSample: false },
       budgets: {},
+      plan: { budgets: {}, lines: {}, expectedCents: null, aiNote: null },
+      carry: { byLine: {}, sources: [] },
+      nextCarry: { byLine: {}, sources: [] },
       nextPlan: { budgets: { Food: 5000 }, lines: { groceries: 5000 }, expectedCents: null, aiNote: "Keep it up" },
       insights: {},
     },

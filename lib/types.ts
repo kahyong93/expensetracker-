@@ -1,4 +1,5 @@
 import type { CurrencyCode } from "@/lib/money";
+import type { CarryInfo } from "@/lib/carry";
 import type { CarryMode, Split } from "@/lib/plan";
 
 /**
@@ -80,8 +81,14 @@ export type MonthPlan = {
 /** Everything loaded for the month in the URL. */
 export type MonthBundle = {
   month: MonthData;
-  /** Budgets set for this month (budget status on the dashboard and boards). */
+  /** Budgets set for this month by category name (legacy key, used by the AI context). */
   budgets: Record<string, number>;
+  /** This month's plan: budgets by plan line id (progress bars on the dashboard and boards). */
+  plan: MonthPlan;
+  /** Unused budget carried into this month, by plan line id. */
+  carry: CarryInfo;
+  /** Unused budget carried into the month after this one (Budget tab). */
+  nextCarry: CarryInfo;
   /** The plan for the month after this one (Budget tab, CSV export). */
   nextPlan: MonthPlan;
   /** Cached AI insight cards for this month. */

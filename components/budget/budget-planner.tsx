@@ -34,6 +34,8 @@ type BudgetPlannerProps = {
   plan: MonthPlan;
   currency: DisplayCurrency;
   planPrefs: PlanPrefs;
+  /** Unused budget carried into the next month, by plan line id. */
+  carry: Record<string, number>;
 };
 
 /**
@@ -41,7 +43,7 @@ type BudgetPlannerProps = {
  * they work before that month exists (P8). Inputs buffer the raw string and commit on
  * blur or Enter; totals and bars update live from the drafts.
  */
-export function BudgetPlanner({ monthKey, nextKey, month, plan, currency, planPrefs }: BudgetPlannerProps) {
+export function BudgetPlanner({ monthKey, nextKey, month, plan, currency, planPrefs, carry }: BudgetPlannerProps) {
   const { isPhone } = useLayoutMode();
   const toast = useToast();
   const mutate = useMutate();
@@ -65,7 +67,7 @@ export function BudgetPlanner({ monthKey, nextKey, month, plan, currency, planPr
     () => applyBudgetDrafts(storedBudgets, drafts, currency),
     [storedBudgets, drafts, currency],
   );
-  const rows = useMemo(() => planLineRows(month, liveBudgets), [month, liveBudgets]);
+  const rows = useMemo(() => planLineRows(month, liveBudgets, carry), [month, liveBudgets, carry]);
 
   // Expected income defaults to this month's income (P3).
   const defaultExpectedCents = useMemo(() => monthTotals(month).earnedCents, [month]);
@@ -178,6 +180,7 @@ export function BudgetPlanner({ monthKey, nextKey, month, plan, currency, planPr
       <PlanTable
         rows={rows}
         sections={sections}
+        carry={carry}
         unassignedCents={unassigned}
         monthKey={monthKey}
         nextKey={nextKey}

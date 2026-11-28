@@ -1,10 +1,11 @@
 "use client";
 
 import { PLAN_GRID_LAPTOP } from "@/components/budget/plan-grid";
+import { carryText } from "@/components/budget/carry-text";
 import { PlanRow } from "@/components/budget/plan-row";
 import { Card, Overline } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import type { PlanLineRow, SectionPlan, SectionStatus } from "@/lib/calc";
+import { sectionCarry, type PlanLineRow, type SectionPlan, type SectionStatus } from "@/lib/calc";
 import { formatMoney, centsToInput, type DisplayCurrency } from "@/lib/money";
 import { PLAN } from "@/lib/plan";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,8 @@ type PlanTableProps = {
   isPhone: boolean;
   /** This month's expenses that have no plan line yet (not shown in any row). */
   unassignedCents: number;
+  /** Unused budget carried into the next month, by plan line id. */
+  carry: Readonly<Record<string, number>>;
   /** Raw strings for inputs being edited, by plan line id. */
   drafts: Readonly<Record<string, string>>;
   errors: Readonly<Record<string, string>>;
@@ -57,6 +60,7 @@ export function PlanTable({
   currency,
   isPhone,
   unassignedCents,
+  carry,
   drafts,
   errors,
   onDraft,
@@ -93,6 +97,16 @@ export function PlanTable({
               >
                 {sectionStatusText(plan.status, plan.splitPct, currency)}
               </span>
+              {sectionCarry(sec.id, carry).any ? (
+                <span
+                  className={cn(
+                    "text-xs font-extrabold",
+                    sectionCarry(sec.id, carry).cents < 0 ? "text-cf-out-tag" : "text-cf-in-tag",
+                  )}
+                >
+                  {carryText(sectionCarry(sec.id, carry).cents, currency)} · {formatMoney(plan.totalCents + sectionCarry(sec.id, carry).cents, currency)} available in {nextKey}
+                </span>
+              ) : null}
             </div>
 
             {isPhone ? null : (

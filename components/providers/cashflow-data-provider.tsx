@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, startTransition, useCallback, useContext, useMemo, useOptimistic, type ReactNode } from "react";
+import type { CarryInfo } from "@/lib/carry";
 import { resolveCurrency, type DisplayCurrency } from "@/lib/money";
 import { nextOf } from "@/lib/months";
 import { applyPatch, type CashflowPatch } from "@/lib/optimistic";
@@ -78,8 +79,14 @@ export type MonthView =
       nextKey: string;
       month: MonthData;
       currency: DisplayCurrency;
-      /** Budgets set for this month (SGD cents by category). */
+      /** Budgets set for this month (SGD cents by category name; legacy). */
       budgets: Record<string, number>;
+      /** This month's plan: budgets by plan line id. */
+      plan: MonthPlan;
+      /** Unused budget carried into this month, by plan line id. */
+      carry: CarryInfo;
+      /** Unused budget carried into the next month. */
+      nextCarry: CarryInfo;
       /** Next month's budgets, expected income and AI note. */
       nextPlan: MonthPlan;
       insights: Partial<Record<InsightKind, Insight>>;
@@ -98,6 +105,9 @@ export function useMonthView(): MonthView {
     month: bundle.month,
     currency: resolveCurrency(app.currency, app.rates),
     budgets: bundle.budgets,
+    plan: bundle.plan,
+    carry: bundle.carry,
+    nextCarry: bundle.nextCarry,
     nextPlan: bundle.nextPlan,
     insights: bundle.insights,
     settings: app.settings,

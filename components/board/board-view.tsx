@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { BoardColumn } from "@/components/board/board-column";
 import { BOARD_COPY } from "@/components/board/board-copy";
 import { BoardToolbar } from "@/components/board/board-toolbar";
+import { SectionSpend } from "@/components/budget/section-spend";
 import { CategoryNameModal, type CategoryModalRequest } from "@/components/board/category-name-modal";
 import { ShareBar } from "@/components/board/share-bar";
 import { useEntryModal } from "@/components/entry/entry-modal-provider";
@@ -16,6 +17,7 @@ import {
   entriesOfType,
   filterEntries,
   lineBreakdown,
+  sectionSpend,
   shareDecimals,
   UNASSIGNED_KEY,
   type CategoryStat,
@@ -34,7 +36,7 @@ type CategoryModalState = { seq: number; open: boolean; request: CategoryModalRe
 
 /** The board for one type of the month in the URL (PRD §7.5 B1–B12). */
 export function BoardView({ type, view }: { type: EntryType; view: ReadyView }) {
-  const { monthKey, month, currency, budgets, settings } = view;
+  const { monthKey, month, currency, plan, carry, settings } = view;
   const mutate = useMutate();
   const { isPhone } = useLayoutMode();
   const toast = useToast();
@@ -50,9 +52,10 @@ export function BoardView({ type, view }: { type: EntryType; view: ReadyView }) 
   // Expenses: one column per plan line, grouped by section (PRD §7.10 S2). Income: user categories.
   const isOut = type === "Out";
   const columns: LineStat[] = isOut
-    ? lineBreakdown(month, budgets)
-    : categoryBreakdown(month, type, budgets).map((s) => ({ ...s, key: s.name, lineId: null, sectionId: null }));
+    ? lineBreakdown(month, plan.lines, carry.byLine)
+    : categoryBreakdown(month, type).map((s) => ({ ...s, key: s.name, lineId: null, sectionId: null }));
   const categories = columns.map((s) => s.name);
+  const sections = isOut ? sectionSpend(month, plan.lines, carry.byLine) : [];
   const decimals = shareDecimals(type);
   const searching = search.trim() !== "";
   const showNotes = !settings.compactCards;
@@ -207,6 +210,12 @@ export function BoardView({ type, view }: { type: EntryType; view: ReadyView }) 
                   <h2 className="m-0 font-heading text-lg font-semibold" style={{ color: sec.fg }}>
                     {sec.num}. {sec.title} <span className="text-[13px] font-bold text-cf-ink-muted">{sec.sub}</span>
                   </h2>
+                  <SectionSpend
+                    spentCents={sections.find((s) => s.id === sec.id)?.spentCents ?? 0}
+                    budget={sections.find((s) => s.id === sec.id)?.budget ?? null}
+                    currency={currency}
+                    className="max-w-[420px]"
+                  />
                   <div className={COLUMN_GRID}>{columns.filter((c) => c.sectionId === sec.id).map(renderColumn)}</div>
                 </section>
               ))}

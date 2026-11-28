@@ -7,6 +7,7 @@ import type { PlanDiff, PlanLineRow } from "@/lib/calc";
 import { centsToInput, formatMoney, type DisplayCurrency } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { PLAN_GRID_LAPTOP, PLAN_GRID_PHONE } from "@/components/budget/plan-grid";
+import { carryText } from "@/components/budget/carry-text";
 
 /** Difference line under the bars (PRD P2). */
 function diffLabel(diff: PlanDiff, monthKey: string, currency: DisplayCurrency): string {
@@ -107,6 +108,11 @@ export function PlanRow({ row, monthKey, nextKey, currency, isPhone, value, erro
         <span id={diffId} className="text-[11px] font-bold text-cf-ink-muted">
           {diffLabel(row.diff, monthKey, currency)}
         </span>
+        {row.carryCents != null ? (
+          <span className={cn("text-[11px] font-bold", row.carryCents < 0 ? "text-cf-out-tag" : "text-cf-in-tag")}>
+            {carryText(row.carryCents, currency)} · {formatMoney((row.budgetCents ?? 0) + row.carryCents, currency)} available
+          </span>
+        ) : null}
       </div>
     </li>
   );

@@ -3,7 +3,8 @@ import { and, eq, inArray } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
 import { db } from '@/db';
 import { aiInsights, categories, entries, months } from '@/db/schema';
-import { placeEntry } from '@/lib/plan';
+import { carryInto, NO_CARRY, type CarryInfo, type MonthSnapshot } from '@/lib/carry';
+import { CARRY_DEFAULT, placeEntry } from '@/lib/plan';
 import { isMonthKey, monthKeyOf, monthSortIndex, nextOf } from '@/lib/months';
 import {
   DEFAULT_IN_CATEGORIES,
@@ -51,6 +52,57 @@ function toPlan(
 }
 
 /**
+ * Carry-over into `key` and into the month after it. Needs every earlier month that has a
+ * plan, with its spend per plan line (expenses saved before sections existed are placed by
+ * the keyword rules, like on read).
+ */
+async function loadCarry(userId: string, key: string, nextKey: string): Promise<{ carry: CarryInfo; nextCarry: CarryInfo }> {
+  const [user, plans] = await Promise.all([
+    db.query.users.findFirst({ where: { id: userId }, columns: { carryMode: true } }),
+    db.query.monthPlans.findMany({
+      where: { userId },
+      columns: { monthKey: true },
+      with: { budgetLines: { columns: { lineId: true, amountCents: true } } },
+    }),
+  ]);
+  const mode = user?.carryMode ?? CARRY_DEFAULT;
+  if (mode === 'off') return { carry: NO_CARRY, nextCarry: NO_CARRY };
+
+  const budgetsByKey = new Map<string, Record<string, number>>();
+  for (const p of plans) {
+    const budgets: Record<string, number> = {};
+    for (const l of p.budgetLines) if (l.lineId) budgets[l.lineId] = l.amountCents;
+    if (Object.keys(budgets).length > 0 && p.monthKey !== key && p.monthKey !== nextKey) budgetsByKey.set(p.monthKey, budgets);
+  }
+  if (budgetsByKey.size === 0) return { carry: NO_CARRY, nextCarry: NO_CARRY };
+
+  const months = await db.query.months.findMany({
+    where: { userId, key: { in: [...budgetsByKey.keys()] } },
+    columns: { key: true },
+    with: {
+      categories: {
+        columns: { type: true, name: true },
+        with: { entries: { columns: { label: true, note: true, amountCents: true, lineId: true } } },
+      },
+    },
+  });
+
+  // Only months that exist can carry; a plan alone has no spend to compare with.
+  const history: MonthSnapshot[] = months.map((m) => {
+    const actuals: Record<string, number> = {};
+    for (const c of m.categories) {
+      if (c.type !== 'Out') continue;
+      for (const e of c.entries) {
+        const lineId = e.lineId ?? placeEntry({ label: e.label, note: e.note ?? '', category: c.name }).lineId;
+        if (lineId) actuals[lineId] = (actuals[lineId] ?? 0) + e.amountCents;
+      }
+    }
+    return { key: m.key, budgets: budgetsByKey.get(m.key) ?? {}, actuals };
+  });
+  return { carry: carryInto(key, mode, history), nextCarry: carryInto(nextKey, mode, history) };
+}
+
+/**
  * The user's month with this key: categories in saved order, entries in the order they
  * were added, this month's budgets, next month's plan and cached AI insights.
  * Returns null when the user has no such month.
@@ -59,7 +111,7 @@ export async function getMonthBundle(key: string): Promise<MonthBundle | null> {
   const userId = await requireUserId();
   const nextKey = nextOf(key);
 
-  const [month, plans] = await Promise.all([
+  const [month, plans, carryInfo] = await Promise.all([
     db.query.months.findFirst({
       where: { userId, key },
       columns: { key: true, isSample: true },
@@ -82,6 +134,7 @@ export async function getMonthBundle(key: string): Promise<MonthBundle | null> {
       columns: { monthKey: true, expectedIncomeCents: true, aiNote: true },
       with: { budgetLines: { columns: { categoryName: true, lineId: true, amountCents: true } } },
     }),
+    loadCarry(userId, key, nextKey),
   ]);
 
   if (!month) return null;
@@ -125,6 +178,9 @@ export async function getMonthBundle(key: string): Promise<MonthBundle | null> {
       entries: rows.map((r) => r.entry),
     },
     budgets: toPlan(plans.find((p) => p.monthKey === key)).budgets,
+    plan: toPlan(plans.find((p) => p.monthKey === key)),
+    carry: carryInfo.carry,
+    nextCarry: carryInfo.nextCarry,
     nextPlan: toPlan(plans.find((p) => p.monthKey === nextKey)),
     insights,
   };

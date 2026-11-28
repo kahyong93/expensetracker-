@@ -17,6 +17,7 @@ export function BudgetView() {
       plan={view.nextPlan}
       currency={view.currency}
       planPrefs={view.planPrefs}
+      carry={view.nextCarry.byLine}
     />
   );
 }

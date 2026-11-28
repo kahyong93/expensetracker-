@@ -3,6 +3,8 @@ import {
   actualsByCategory,
   actualsByLine,
   lineBreakdown,
+  sectionCarry,
+  sectionSpend,
   UNASSIGNED_KEY,
   planLineRows,
   planLineTotals,
@@ -169,7 +171,7 @@ describe("monthTotals edge cases", () => {
 
 describe("budgetStatus (PRD §8 budget use)", () => {
   it("shows the share used and what is left", () => {
-    expect(budgetStatus(5000, 10000)).toEqual({ budgetCents: 10000, spentCents: 5000, usePct: 50, over: false, diffCents: 5000 });
+    expect(budgetStatus(5000, 10000)).toEqual({ budgetCents: 10000, spentCents: 5000, usePct: 50, over: false, diffCents: 5000, carryCents: 0 });
   });
 
   it("is full but not over when spent equals budget", () => {
@@ -183,6 +185,7 @@ describe("budgetStatus (PRD §8 budget use)", () => {
   it("treats a zero budget as fully used (reference: b ? t/b*100 : 100)", () => {
     expect(budgetStatus(0, 0)).toMatchObject({ usePct: 100, over: false });
     expect(budgetStatus(1, 0)).toMatchObject({ usePct: 100, over: true, diffCents: 1 });
+    expect(budgetStatus(8000, 10000, -3000)).toMatchObject({ budgetCents: 7000, over: true, diffCents: 1000, carryCents: -3000 });
   });
 });
 
@@ -375,7 +378,7 @@ describe("budget plan by line", () => {
 
   it("builds expense board columns per line, with Unassigned last and only when needed", () => {
     const m = month([spend("a", 800, "groceries"), spend("b", 200, "groceries"), spend("c", 1000, "rent")]);
-    const stats = lineBreakdown(m, { Groceries: 2000 });
+    const stats = lineBreakdown(m, { groceries: 2000 });
     expect(stats).toHaveLength(23);
     expect(stats[0]).toMatchObject({ key: "rent", name: "Rent / mortgage", count: 1, totalCents: 1000, sharePct: 50 });
     expect(stats.find((s) => s.key === "groceries")).toMatchObject({ count: 2, totalCents: 1000, budget: { over: false } });
@@ -384,5 +387,30 @@ describe("budget plan by line", () => {
     const withUnassigned = lineBreakdown(month([spend("d", 90, null)]));
     expect(withUnassigned).toHaveLength(24);
     expect(withUnassigned.at(-1)).toMatchObject({ key: UNASSIGNED_KEY, name: "Unassigned", count: 1, lineId: null, sectionId: null });
+  });
+
+  it("adds carry-over to a line's budget, and carry alone is enough for a status", () => {
+    const m = month([spend("a", 1500, "groceries"), spend("b", 100, "rent")]);
+    const stats = lineBreakdown(m, { groceries: 1000 }, { groceries: 300, rent: -50 });
+    expect(stats.find((s) => s.key === "groceries")?.budget).toMatchObject({ budgetCents: 1300, over: true, diffCents: 200, carryCents: 300 });
+    expect(stats.find((s) => s.key === "rent")?.budget).toMatchObject({ budgetCents: -50, over: true, carryCents: -50 });
+    expect(stats.find((s) => s.key === "util")?.budget).toBeNull();
+  });
+
+  it("sums a section's spend against its budget plus carry", () => {
+    const m = month([spend("a", 400, "groceries"), spend("b", 700, "rent"), spend("c", 50, null)]);
+    const secs = sectionSpend(m, { groceries: 500, rent: 600 }, { rent: 100 });
+    const needs = secs.find((s) => s.id === "needs")!;
+    expect(needs.spentCents).toBe(1100);
+    expect(needs.budget).toMatchObject({ budgetCents: 1200, over: false, diffCents: 100, carryCents: 100 });
+    expect(secs.find((s) => s.id === "fun")).toMatchObject({ spentCents: 0, budget: null });
+  });
+
+  it("carries into plan rows and sums a section's carry", () => {
+    const rows = planLineRows(month([]), { rent: 100 }, { rent: 40, groceries: -10 });
+    expect(rows.find((r) => r.id === "rent")?.carryCents).toBe(40);
+    expect(rows.find((r) => r.id === "util")?.carryCents).toBeNull();
+    expect(sectionCarry("needs", { rent: 40, groceries: -10 })).toEqual({ cents: 30, any: true });
+    expect(sectionCarry("fun", { rent: 40 })).toEqual({ cents: 0, any: false });
   });
 });

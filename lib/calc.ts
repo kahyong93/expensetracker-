@@ -87,9 +87,13 @@ export type BudgetStatus = {
   over: boolean;
   /** budget − spent when within budget, spent − budget when over. Always ≥ 0. */
   diffCents: number;
+  /** Unused budget carried in from earlier months (negative when overspent); already inside budgetCents. */
+  carryCents: number;
 };
 
-export function budgetStatus(spentCents: number, budgetCents: number): BudgetStatus {
+export function budgetStatus(spentCents: number, plannedCents: number, carryCents = 0): BudgetStatus {
+  // What can be spent: this month's budget plus unused budget carried over (negative if overspent).
+  const budgetCents = plannedCents + carryCents;
   const over = spentCents > budgetCents;
   const usePct = budgetCents > 0 ? Math.min((spentCents / budgetCents) * 100, 100) : 100;
   return {
@@ -98,6 +102,7 @@ export function budgetStatus(spentCents: number, budgetCents: number): BudgetSta
     usePct,
     over,
     diffCents: over ? spentCents - budgetCents : budgetCents - spentCents,
+    carryCents,
   };
 }
 
@@ -294,10 +299,20 @@ export function unassignedCents(month: MonthData): number {
   return month.entries.reduce((acc, e) => (e.type === "Out" && !e.lineId ? acc + e.amountCents : acc), 0);
 }
 
-export type PlanLineRow = PlanRow & { id: string; hint: string; sectionId: SectionId };
+export type PlanLineRow = PlanRow & {
+  id: string;
+  hint: string;
+  sectionId: SectionId;
+  /** Unused budget carried in from earlier months, or null when this line has none. */
+  carryCents: number | null;
+};
 
 /** One planner row per plan line, in budget-page order. */
-export function planLineRows(month: MonthData, lineBudgets: Record<string, number>): PlanLineRow[] {
+export function planLineRows(
+  month: MonthData,
+  lineBudgets: Record<string, number>,
+  carry: Record<string, number> = {},
+): PlanLineRow[] {
   const actuals = actualsByLine(month);
   const scale = Math.max(1, ...PLAN_LINES.map((l) => actuals[l.id] ?? 0), ...PLAN_LINES.map((l) => lineBudgets[l.id] ?? 0));
   return PLAN_LINES.map((line) => {
@@ -313,6 +328,7 @@ export function planLineRows(month: MonthData, lineBudgets: Record<string, numbe
       id: line.id,
       hint: line.hint,
       sectionId: line.sectionId,
+      carryCents: carry[line.id] ?? null,
       name: line.name,
       color: getSection(line.sectionId)?.color ?? "",
       actualCents,
@@ -392,10 +408,14 @@ export type LineStat = CategoryStat & {
 
 /**
  * Expenses board columns (PRD §7.10 S2): one per plan line in budget-page order, then
- * Unassigned when some expenses have no line. Budgets are looked up by the line's name
- * until the dashboard and boards read plans by line id.
+ * Unassigned when some expenses have no line. A line's budget is its plan amount for this
+ * month plus any carry-over; a line with only carry-over still gets a status.
  */
-export function lineBreakdown(month: MonthData, budgetsByName: Record<string, number> = {}): LineStat[] {
+export function lineBreakdown(
+  month: MonthData,
+  lineBudgets: Record<string, number> = {},
+  carry: Record<string, number> = {},
+): LineStat[] {
   const entries = entriesOfType(month, "Out");
   const typeTotal = sumCents(entries);
   const stat = (
@@ -408,7 +428,8 @@ export function lineBreakdown(month: MonthData, budgetsByName: Record<string, nu
     sectionId: SectionId | null,
   ): LineStat => {
     const totalCents = sumCents(items);
-    const budgetCents = lineId ? budgetsByName[name] : undefined;
+    const planned = lineId ? lineBudgets[lineId] : undefined;
+    const carried = lineId ? carry[lineId] : undefined;
     return {
       key,
       name,
@@ -418,7 +439,7 @@ export function lineBreakdown(month: MonthData, budgetsByName: Record<string, nu
       count: items.length,
       totalCents,
       sharePct: typeTotal ? (totalCents / typeTotal) * 100 : 0,
-      budget: budgetCents == null ? null : budgetStatus(totalCents, budgetCents),
+      budget: planned == null && carried == null ? null : budgetStatus(totalCents, planned ?? 0, carried ?? 0),
       lineId,
       sectionId,
     };
@@ -440,4 +461,42 @@ export function lineBreakdown(month: MonthData, budgetsByName: Record<string, nu
     stats.push(stat(UNASSIGNED_KEY, UNASSIGNED, PLAN_LINES.length, unassigned, categoryColor(PLAN_LINES.length), null, null));
   }
   return stats;
+}
+
+export type SectionSpend = {
+  id: SectionId;
+  spentCents: number;
+  /** Status against this month's budget plus carry-over, or null when the section has neither. */
+  budget: BudgetStatus | null;
+};
+
+/** Spend per section against the viewed month's plan, including carry-over (PRD §7.10 S4). */
+export function sectionSpend(
+  month: MonthData,
+  lineBudgets: Record<string, number>,
+  carry: Record<string, number>,
+): SectionSpend[] {
+  const actuals = actualsByLine(month);
+  return PLAN.map((section) => {
+    let spent = 0;
+    let planned = 0;
+    let carried = 0;
+    let any = false;
+    for (const line of section.lines) {
+      spent += actuals[line.id] ?? 0;
+      if (lineBudgets[line.id] != null || carry[line.id] != null) any = true;
+      planned += lineBudgets[line.id] ?? 0;
+      carried += carry[line.id] ?? 0;
+    }
+    return { id: section.id, spentCents: spent, budget: any ? budgetStatus(spent, planned, carried) : null };
+  });
+}
+
+/** A section's carry-over: the sum over its lines, and whether any line has one. */
+export function sectionCarry(sectionId: SectionId, carry: Record<string, number>): { cents: number; any: boolean } {
+  const lines = getSection(sectionId)?.lines ?? [];
+  return {
+    cents: lines.reduce((acc, l) => acc + (carry[l.id] ?? 0), 0),
+    any: lines.some((l) => carry[l.id] != null),
+  };
 }

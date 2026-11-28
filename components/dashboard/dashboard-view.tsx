@@ -7,7 +7,8 @@ import { WhereItWent } from "@/components/dashboard/where-it-went";
 import { useMonthView } from "@/components/providers/cashflow-data-provider";
 import { useLayoutMode } from "@/components/providers/layout-mode-provider";
 import { MonthMissing } from "@/components/shell/month-missing";
-import { categoryBreakdown, donutGradient, entriesOfType, monthTotals } from "@/lib/calc";
+import { categoryBreakdown, donutGradient, entriesOfType, lineBreakdown, monthTotals, sectionSpend } from "@/lib/calc";
+import { categoryColor } from "@/lib/design/palette";
 import { monthHref } from "@/lib/months";
 
 /**
@@ -20,9 +21,14 @@ export function DashboardView() {
 
   if (view.status === "missing") return <MonthMissing monthKey={view.monthKey} tab="dashboard" />;
 
-  const { month, monthKey, currency, budgets, settings } = view;
+  const { month, monthKey, currency, plan, carry, settings } = view;
   const totals = monthTotals(month);
-  const outStats = categoryBreakdown(month, "Out", budgets);
+  // One row per plan line that has spend or a budget (incl. carry-over) this month, then Unassigned.
+  // Each row gets its own palette colour so the donut slices stay distinguishable.
+  const outStats = lineBreakdown(month, plan.lines, carry.byLine)
+    .filter((s) => s.count > 0 || s.budget != null)
+    .map((s, i) => ({ ...s, index: i, color: categoryColor(i).solid, tint: categoryColor(i).tint }));
+  const sections = sectionSpend(month, plan.lines, carry.byLine);
   const inStats = categoryBreakdown(month, "In");
   const showAudit = month.isSample && settings.showAudit && !isPhone;
 
@@ -33,6 +39,7 @@ export function DashboardView() {
         <WhereItWent
           monthKey={monthKey}
           categories={outStats}
+          sections={sections}
           donutGradient={donutGradient(outStats)}
           spentCents={totals.spentCents}
           currency={currency}

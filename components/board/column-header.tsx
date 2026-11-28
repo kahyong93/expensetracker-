@@ -1,6 +1,7 @@
 "use client";
 
 import { BOARD_COPY } from "@/components/board/board-copy";
+import { carryText } from "@/components/budget/carry-text";
 import { CloseIcon, PencilIcon } from "@/components/icons/line-icons";
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -90,6 +91,9 @@ export function ColumnHeader({
               ? BOARD_COPY.budgetOver(formatMoney(budget.diffCents, currency), formatMoney(budget.budgetCents, currency))
               : BOARD_COPY.budgetLeft(formatMoney(budget.diffCents, currency), formatMoney(budget.budgetCents, currency))}
           </span>
+          {budget.carryCents !== 0 ? (
+            <span className="text-[11px] font-bold text-cf-ink-muted">{carryText(budget.carryCents, currency)}</span>
+          ) : null}
         </div>
       ) : null}
     </div>
