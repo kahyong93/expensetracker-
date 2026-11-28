@@ -219,6 +219,18 @@ Settings are reached from a small settings entry in the header, styled per DESIG
 
 ---
 
+### 7.10 Sections and lines (budget plan connected to entries)
+Source: the `PLAN` constant in the reference design. See `GLOSSARY.md` and ADR 0002.
+| ID | Requirement | P |
+|---|---|---|
+| S1 | The Add / Edit item form on **Expenses** has a **Section** select (Basic Needs, Investment / Savings, Entertainment) and a **Category** select listing only that section's lines, in budget-page order. Each expense entry saves its section id and line id. Income keeps its own categories. | P0 |
+| S2 | The Expenses board is grouped by section, then line, with the budget page's names and order. Expense entries with no line show under **Unassigned** and can be changed on any entry. | P0 |
+| S3 | Existing expense entries without a section or line are filled once by the keyword rules (`mapEntry()`). | P0 |
+| S4 | **Spent vs budget** matches entries to budget lines by saved line id, on the budget page, Dashboard and Expenses board. Dashboard and board bars read the viewed month's plan per section and per line, including carry-over. | P0 |
+| S5 | Carry-over applies to Basic Needs, Investment / Savings and Entertainment. | P0 |
+| S6 | AI **Suggest** category chooses from the same sections and lines. AI chat and insights see sections, lines, split targets and carry-over. | P0 |
+| S7 | **Reset to sample data** also clears plans, the AI note, split and carry. | P0 |
+
 ## 8. Calculation rules
 
 All totals are calculated from entries, never stored or typed.
