@@ -122,10 +122,11 @@ export async function suggestBudgetAction(monthKey: string): Promise<ActionResul
               nextKey,
               currency,
               expectedCents,
+              split: loaded.app.planPrefs.split,
             }),
           },
         ],
-        maxTokens: 600,
+        maxTokens: 800,
         schema: budgetSchema(),
       });
       const suggestion = parseBudgetReply(reply, currency);

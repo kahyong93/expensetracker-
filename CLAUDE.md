@@ -117,7 +117,7 @@ Decision record: `docs/adr/0001-ai-via-langchain.md`. Per-feature spec and build
 | categorise | income `{category}`, matched case-insensitively to existing categories; expense `{lineId}`, a real plan line id | 100 | no |
 | chat | plain text; the last 10 messages are sent | 600 | no |
 | insight | `{headline, points:[{title,text}]}` | 900 | AiInsight |
-| budget | `{budgets:{lineId:number}, note}`, one amount per plan line id | 600 | Budget + BudgetNote |
+| budget | `{plan:{lineId:number}, note}`, one amount per plan line id (0 = no budget) | 800 | Budget + BudgetNote |
 | paste | `{entries:[{type,category,lineId,label,amount,note}]}`, input ≤ 4,000 chars, amounts in the display currency | 1500 | only after user confirms |
 
 - Max tokens is the budget for the visible answer. The client adds a fixed allowance for reasoning models, whose hidden reasoning counts against the same limit.

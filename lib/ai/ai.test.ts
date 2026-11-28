@@ -216,44 +216,47 @@ describe('tips (AI-7)', () => {
 });
 
 describe('smart budget (AI-4)', () => {
+  const SPLIT = { needs: 50, invest: 20, fun: 30 };
   const allLines = (amount: unknown) => Object.fromEntries(PLAN_LINES.map((l) => [l.id, amount]));
+  const prompt = (nextKey: string) => budgetPrompt({ context: 'CTX', nextKey, currency: USD, expectedCents: 500000, split: SPLIT });
 
-  it('asks for one amount per plan line id, with expected income in the display currency', () => {
-    const prompt = budgetPrompt({ context: 'CTX', nextKey: 'Feb-25', currency: USD, expectedCents: 500000 });
-    expect(prompt.startsWith('CTX\n\nTask: Suggest a realistic budget for each expense line for Feb-25, based on this month.')).toBe(true);
-    expect(prompt).toContain('Treat one-off or annual items (like large insurance payments) as non-recurring unless they clearly repeat. Expected income: US$2500.00.');
-    expect(prompt).toContain('Use these line ids exactly: rent, util, phone,');
-    expect(prompt).toContain(', gifts.');
-    expect(prompt.endsWith('\nJSON: {"budgets": {"<lineId>": number}, "note": one or two sentences explaining the plan}')).toBe(true);
+  it('uses the reference plan task, with expected income in the display currency and every line by id', () => {
+    const text = prompt('Feb-25');
+    expect(text.startsWith('CTX\n\nTask: Plan a realistic budget for Feb-25 in three sections. Expected income: US$2500.00. ')).toBe(true);
+    expect(text).toContain("Base basic needs on this month's real spending; treat one-off or annual items (like large insurance payments) as non-recurring unless they clearly repeat. Put money into investment / savings lines, and keep entertainment sensible. Use 0 for lines that do not apply. Lines by id:\n");
+    expect(text).toContain('Basic Needs (target 50% of income): rent = Rent / mortgage; util = Utilities [Electricity, water, gas];');
+    expect(text).toContain('\nInvestment / Savings (target 20% of income): emergency = Emergency fund [Aim for 3–6 months of expenses];');
+    expect(text).toContain('\nEntertainment (target 30% of income): dining = Dining out and food delivery;');
+    expect(text.endsWith('\nJSON: {"plan": {"<id>": number}, "note": one or two sentences explaining the plan}')).toBe(true);
+  });
+
+  it('adds the gifts hint only for a December plan', () => {
+    expect(prompt('Dec-25')).toContain('sensible. It is December, so allow a little extra for gifts and celebrations. Use 0 for lines that do not apply.');
+    expect(prompt('Nov-25')).not.toContain('December');
   });
 
   it('builds a strict form with one required number per plan line', () => {
     const schema = budgetSchema();
-    const budgets = schema.properties.budgets as { properties: Record<string, unknown>; required: string[]; additionalProperties: boolean };
-    expect(Object.keys(budgets.properties)).toEqual(PLAN_LINES.map((l) => l.id));
-    expect(budgets.required).toEqual(PLAN_LINES.map((l) => l.id));
-    expect(budgets.additionalProperties).toBe(false);
-    expect(schema.required).toEqual(['budgets', 'note']);
+    const plan = schema.properties.plan as { properties: Record<string, unknown>; required: string[]; additionalProperties: boolean };
+    expect(Object.keys(plan.properties)).toEqual(PLAN_LINES.map((l) => l.id));
+    expect(plan.required).toEqual(PLAN_LINES.map((l) => l.id));
+    expect(plan.additionalProperties).toBe(false);
+    expect(schema.required).toEqual(['plan', 'note']);
   });
 
-  it('keeps exact line ids, converts display amounts to SGD cents, and keeps the note', () => {
-    const reply = { budgets: { ...allLines(0), groceries: 50, pets: 99 }, note: ' Trimmed a little. ' };
-    const parsed = parseBudgetReply(reply, USD);
-    expect(parsed?.note).toBe('Trimmed a little.');
-    expect(parsed?.budgets.groceries).toBe(10000);
-    expect(parsed?.budgets.rent).toBe(0);
-    expect(Object.keys(parsed?.budgets ?? {})).toHaveLength(23);
-    expect(parsed?.budgets).not.toHaveProperty('pets');
+  it('converts display amounts to SGD cents per line id, skips zeros, ignores unknown ids and keeps the note', () => {
+    const reply = { plan: { ...allLines(0), groceries: 50, rent: 100, pets: 99 }, note: ' Trimmed a little. ' };
+    expect(parseBudgetReply(reply, USD)).toEqual({ budgets: { groceries: 10000, rent: 20000 }, note: 'Trimmed a little.' });
   });
 
   it('rejects the whole reply when any line is missing or has a bad amount, so nothing is saved', () => {
-    expect(parseBudgetReply({ budgets: { ...allLines(5), rent: -5 }, note: '' }, SGD)).toBeNull();
-    expect(parseBudgetReply({ budgets: { ...allLines(5), rent: Number.NaN }, note: '' }, SGD)).toBeNull();
+    expect(parseBudgetReply({ plan: { ...allLines(5), rent: -5 }, note: '' }, SGD)).toBeNull();
+    expect(parseBudgetReply({ plan: { ...allLines(5), rent: Number.NaN }, note: '' }, SGD)).toBeNull();
     const missing = allLines(5);
     delete missing.util;
-    expect(parseBudgetReply({ budgets: missing, note: 'x' }, SGD)).toBeNull();
-    expect(parseBudgetReply({ budgets: allLines(5), note: 42 }, SGD)).toBeNull();
-    expect(parseBudgetReply({ budgets: 'nope', note: 'x' }, SGD)).toBeNull();
+    expect(parseBudgetReply({ plan: missing, note: 'x' }, SGD)).toBeNull();
+    expect(parseBudgetReply({ plan: allLines(5), note: 42 }, SGD)).toBeNull();
+    expect(parseBudgetReply({ plan: 'nope', note: 'x' }, SGD)).toBeNull();
   });
 });
 

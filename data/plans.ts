@@ -43,7 +43,7 @@ export async function setBudget(monthKey: string, categoryName: string, cents: n
 }
 
 /**
- * Replace every budget for a month (P5 "Fill with…", AI-4). With `aiNote`, also stores
+ * Replace every budget for a month by category name (legacy). With `aiNote`, also stores
  * the AI note; otherwise the note is left as it is.
  */
 export async function replaceBudgets(
@@ -52,7 +52,7 @@ export async function replaceBudgets(
   aiNote?: string,
 ): Promise<void> {
   const userId = await requireUserId();
-  // Name-keyed callers (AI-4 until it picks lines itself): a name that matches a plan line also gets its line id.
+  // Name-keyed callers: a name that matches a plan line also gets its line id.
   const rows = Object.entries(budgets).map(([categoryName, amountCents]) => ({
     userId,
     monthKey,

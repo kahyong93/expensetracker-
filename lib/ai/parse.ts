@@ -69,18 +69,19 @@ export type BudgetSuggestion = {
 
 /**
  * AI-4: one amount per plan line id (unknown ids are ignored), converted from the display
- * currency to SGD cents. Saving replaces every budget for next month, so a reply with any
- * missing, negative or non-finite amount is rejected whole: nothing is saved.
+ * currency to SGD cents. Lines the AI sets to 0 get no budget (reference). Saving replaces
+ * every budget for next month, so a reply with any missing, negative or non-finite amount is
+ * rejected whole: nothing is saved.
  */
 export function parseBudgetReply(value: unknown, currency: DisplayCurrency): BudgetSuggestion | null {
-  if (!isRecord(value) || !isRecord(value.budgets) || typeof value.note !== 'string') return null;
+  if (!isRecord(value) || !isRecord(value.plan) || typeof value.note !== 'string') return null;
   const note = parseAiNote(value.note);
   if (note == null) return null;
   const budgets: Record<string, number> = {};
   for (const line of PLAN_LINES) {
-    const cents = displayToCents(value.budgets[line.id], currency);
+    const cents = displayToCents(value.plan[line.id], currency);
     if (cents == null || cents > LIMITS.maxAmountCents) return null;
-    budgets[line.id] = cents;
+    if (cents > 0) budgets[line.id] = cents;
   }
   return { budgets, note };
 }

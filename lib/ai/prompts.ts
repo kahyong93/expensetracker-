@@ -90,20 +90,31 @@ export function insightPrompt(context: string, kind: InsightKind): string {
   return context + '\n\nTask: ' + INSIGHT_TASKS[kind] + '\n' + INSIGHT_SHAPE;
 }
 
+/** The sections with their lines as "id = name [hint]", and each section's split target (reference `suggestBudget`). */
+function planWithTargets(split: Split): string {
+  return PLAN.map(
+    (s) =>
+      s.title + ' (target ' + split[s.id] + '% of income): ' +
+      s.lines.map((l) => l.id + ' = ' + l.name + (l.hint ? ' [' + l.hint + ']' : '')).join('; '),
+  ).join('\n');
+}
+
 /** AI-4 (reference `suggestBudget`). Expected income is SGD cents, shown in the display currency. */
 export function budgetPrompt(input: {
   context: string;
   nextKey: string;
   currency: DisplayCurrency;
   expectedCents: number;
+  split: Split;
 }): string {
   return (
     input.context +
-    '\n\nTask: Suggest a realistic budget for each expense line for ' + input.nextKey +
-    ', based on this month. Treat one-off or annual items (like large insurance payments) as non-recurring unless they clearly repeat. Expected income: ' +
+    '\n\nTask: Plan a realistic budget for ' + input.nextKey + ' in three sections. Expected income: ' +
     input.currency.sym + displayAmount(input.expectedCents, input.currency) +
-    '. Use these line ids exactly: ' + PLAN_LINES.map((l) => l.id).join(', ') +
-    '.\nJSON: {"budgets": {"<lineId>": number}, "note": one or two sentences explaining the plan}'
+    ". Base basic needs on this month's real spending; treat one-off or annual items (like large insurance payments) as non-recurring unless they clearly repeat. Put money into investment / savings lines, and keep entertainment sensible. " +
+    (/Dec/.test(input.nextKey) ? 'It is December, so allow a little extra for gifts and celebrations. ' : '') +
+    'Use 0 for lines that do not apply. Lines by id:\n' + planWithTargets(input.split) +
+    '\nJSON: {"plan": {"<id>": number}, "note": one or two sentences explaining the plan}'
   );
 }
 

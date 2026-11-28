@@ -88,11 +88,11 @@ const FAKE_PASTE = {
 };
 
 /** AI-4: 100 (display currency) for every plan line the form lists. */
-function fakeBudget(schema: JsonSchema): { budgets: Record<string, number>; note: string } {
-  const form = schema.properties.budgets as { properties?: Record<string, unknown> } | undefined;
+function fakeBudget(schema: JsonSchema): { plan: Record<string, number>; note: string } {
+  const form = schema.properties.plan as { properties?: Record<string, unknown> } | undefined;
   const lineIds = Object.keys(form?.properties ?? {});
   return {
-    budgets: Object.fromEntries(lineIds.map((id) => [id, 100])),
+    plan: Object.fromEntries(lineIds.map((id) => [id, 100])),
     note: 'I set every category to 100 to keep next month simple.',
   };
 }

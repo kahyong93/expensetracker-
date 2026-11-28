@@ -45,14 +45,14 @@ export const INSIGHT_SCHEMA: JsonSchema = {
   additionalProperties: false,
 };
 
-/** AI-4: `{ budgets: { <each plan line id>: number }, note }`. */
+/** AI-4: `{ plan: { <each plan line id>: number }, note }`. */
 export function budgetSchema(): JsonSchema {
   const ids = PLAN_LINES.map((l) => l.id);
   return {
     title: 'budget_reply',
     type: 'object',
     properties: {
-      budgets: {
+      plan: {
         type: 'object',
         properties: Object.fromEntries(ids.map((id) => [id, { type: 'number' }])),
         required: ids,
@@ -60,7 +60,7 @@ export function budgetSchema(): JsonSchema {
       },
       note: { type: 'string' },
     },
-    required: ['budgets', 'note'],
+    required: ['plan', 'note'],
     additionalProperties: false,
   };
 }
