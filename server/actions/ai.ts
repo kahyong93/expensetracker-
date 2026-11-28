@@ -7,6 +7,7 @@ import {
   parseBudgetReply,
   parseCategoryReply,
   parseInsightReply,
+  parseLineReply,
   parsePasteReply,
   type BudgetSuggestion,
   type CategorySuggestion,
@@ -20,14 +21,14 @@ import {
   pastePrompt,
   systemPrompt,
 } from '@/lib/ai/prompts';
-import { CATEGORY_SCHEMA, INSIGHT_SCHEMA, PASTE_SCHEMA, budgetSchema } from '@/lib/ai/schemas';
+import { CATEGORY_LINE_SCHEMA, CATEGORY_SCHEMA, INSIGHT_SCHEMA, PASTE_SCHEMA, budgetSchema } from '@/lib/ai/schemas';
 import { PASTE_EMPTY_MESSAGE, PASTE_MAX_CHARS, PASTE_NO_ENTRIES_MESSAGE, PASTE_TOO_LONG_MESSAGE } from '@/lib/ai-messages';
 import { categoriesOf, monthTotals } from '@/lib/calc';
 import { nextOf } from '@/lib/months';
 import type { ActionResult, ChatTurn, EntryInput, EntryType, Insight, InsightKind } from '@/lib/types';
 import { LIMITS, parseChatMessages, parseEntryType, parseInsightKind, parseMonthLabel } from '@/lib/validation';
 import { INVALID } from './run-action';
-import { AI_BAD_REPLY, MONTH_MISSING, loadAiMonth, runAi } from './run-ai';
+import { AI_BAD_REPLY, MONTH_MISSING, loadAiMonth, planContext, runAi } from './run-ai';
 
 /*
  * AI Server Actions (CLAUDE.md §7, ADR 0001). The client sends the month key and the
@@ -54,7 +55,7 @@ export async function askMoneyAction(monthKey: string, messages: ChatTurn[]): Pr
     const reply = await complete({
       task: 'chat',
       system: systemPrompt(currency, false),
-      messages: chatMessages(monthContext(bundle.month, bundle.budgets, currency), history),
+      messages: chatMessages(monthContext(bundle.month, planContext(loaded), currency), history),
       maxTokens: 600,
     });
     // Capped so the reply still passes validation when it comes back as chat history.
@@ -79,7 +80,7 @@ export async function generateInsightAction(monthKey: string, kind: InsightKind)
       const reply = await completeJson({
         task: k,
         system: systemPrompt(currency, true),
-        messages: [{ role: 'user', content: insightPrompt(monthContext(bundle.month, bundle.budgets, currency), k) }],
+        messages: [{ role: 'user', content: insightPrompt(monthContext(bundle.month, planContext(loaded), currency), k) }],
         maxTokens: 900,
         schema: INSIGHT_SCHEMA,
       });
@@ -106,8 +107,6 @@ export async function suggestBudgetAction(monthKey: string): Promise<ActionResul
       const loaded = await loadAiMonth(key);
       if (!loaded) return MONTH_MISSING;
       const { bundle, currency } = loaded;
-      const categories = categoriesOf(bundle.month, 'Out');
-      if (categories.length === 0) return INVALID;
       const nextKey = nextOf(key);
       // P3: expected income defaults to this month's income.
       const expectedCents = bundle.nextPlan.expectedCents ?? monthTotals(bundle.month).earnedCents;
@@ -119,21 +118,20 @@ export async function suggestBudgetAction(monthKey: string): Promise<ActionResul
           {
             role: 'user',
             content: budgetPrompt({
-              context: monthContext(bundle.month, bundle.budgets, currency),
+              context: monthContext(bundle.month, planContext(loaded), currency),
               nextKey,
               currency,
               expectedCents,
-              categories,
             }),
           },
         ],
         maxTokens: 600,
-        schema: budgetSchema(categories),
+        schema: budgetSchema(),
       });
-      const suggestion = parseBudgetReply(reply, categories, currency);
+      const suggestion = parseBudgetReply(reply, currency);
       if (!suggestion) return AI_BAD_REPLY;
 
-      await plansData.replaceBudgets(nextKey, suggestion.budgets, suggestion.note);
+      await plansData.replaceLineBudgets(nextKey, suggestion.budgets, suggestion.note);
       return { ok: true, data: suggestion };
     },
     { revalidate: true },
@@ -155,16 +153,16 @@ export async function parsePasteAction(monthKey: string, text: string): Promise<
     const loaded = await loadAiMonth(key);
     if (!loaded) return MONTH_MISSING;
     const { bundle, currency } = loaded;
-    const categories = { Out: categoriesOf(bundle.month, 'Out'), In: categoriesOf(bundle.month, 'In') };
+    const incomeCategories = categoriesOf(bundle.month, 'In');
 
     const reply = await completeJson({
       task: 'paste',
       system: systemPrompt(currency, true),
-      messages: [{ role: 'user', content: pastePrompt({ categories, currency, text: trimmed }) }],
+      messages: [{ role: 'user', content: pastePrompt({ incomeCategories, currency, text: trimmed }) }],
       maxTokens: 1500,
       schema: PASTE_SCHEMA,
     });
-    const rows = parsePasteReply(reply, categories, currency);
+    const rows = parsePasteReply(reply, incomeCategories, currency);
     if (!rows) return AI_BAD_REPLY;
     if (rows.length === 0) return { ok: false, code: 'paste_no_entries', message: PASTE_NO_ENTRIES_MESSAGE };
     return { ok: true, data: rows };
@@ -192,9 +190,9 @@ export async function suggestCategoryAction(
       system: systemPrompt(loaded.currency, true),
       messages: [{ role: 'user', content: categorisePrompt({ type, label, note, categories }) }],
       maxTokens: 100,
-      schema: CATEGORY_SCHEMA,
+      schema: type === 'Out' ? CATEGORY_LINE_SCHEMA : CATEGORY_SCHEMA,
     });
-    const suggestion = parseCategoryReply(reply, categories);
+    const suggestion = type === 'Out' ? parseLineReply(reply) : parseCategoryReply(reply, categories);
     return suggestion ? { ok: true, data: suggestion } : AI_BAD_REPLY;
   });
 }

@@ -8,6 +8,7 @@ import { aiRateLimiter } from '@/lib/ai/rate-limit';
 import { AI_BAD_REPLY_MESSAGE, AI_BUSY_MESSAGE } from '@/lib/ai-messages';
 import { resolveCurrency, type DisplayCurrency } from '@/lib/money';
 import type { ActionResult, AppData, MonthBundle } from '@/lib/types';
+import type { PlanContext } from '@/lib/ai/prompts';
 import { GENERIC_ERROR } from './run-action';
 
 export const AI_BUSY: ActionResult<never> = { ok: false, code: 'ai_busy', message: AI_BUSY_MESSAGE };
@@ -21,6 +22,11 @@ export async function loadAiMonth(monthKey: string): Promise<AiMonth | null> {
   const [app, bundle] = await Promise.all([getAppData(), getMonthBundle(monthKey)]);
   if (!bundle) return null;
   return { app, bundle, currency: resolveCurrency(app.currency, app.rates) };
+}
+
+/** The plan the AI sees: this month's budgets by line id, carry-over and split targets. */
+export function planContext({ app, bundle }: AiMonth): PlanContext {
+  return { lineBudgets: bundle.plan.lines, carry: bundle.carry.byLine, split: app.planPrefs.split };
 }
 
 /**

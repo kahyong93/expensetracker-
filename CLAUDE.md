@@ -110,15 +110,15 @@ Decision record: `docs/adr/0001-ai-via-langchain.md`. Per-feature spec and build
   - `Month / Currency / categories / [budgets]`
   - `Entries (type | category | item | amount)`
 - **System prompt:** "You are a cheerful, concise personal finance helper inside a budgeting app. Use only the data provided and never invent transactions. Write amounts like {sym}12.34." Then append either "Reply with valid JSON only, no markdown or code fences." or "Reply in plain text without markdown, under 120 words."
-- Use the task prompts word for word from the reference design: `runInsight`, `suggestBudget`, `runPaste`, `suggestCat`. The only change is the paste shape line (`{"entries": [...]}`, see above).
+- Use the task prompts word for word from the reference design: `runInsight`, `suggestBudget`, `runPaste`, `suggestCat`. The only changes are the paste shape line (`{"entries": [...]}`, see above) and the section/line fields: expenses pick a plan line id (`lineId`) in `suggestCat`, `runPaste` and `suggestBudget` (see ADR 0002), and `ctx()` adds the plan sections, split targets and carry-over.
 
 | Action | Output (validate the shape) | Max tokens | Persist |
 |---|---|---|---|
-| categorise | `{category}`, matched case-insensitively to existing categories | 100 | no |
+| categorise | income `{category}`, matched case-insensitively to existing categories; expense `{lineId}`, a real plan line id | 100 | no |
 | chat | plain text; the last 10 messages are sent | 600 | no |
 | insight | `{headline, points:[{title,text}]}` | 900 | AiInsight |
-| budget | `{budgets:{cat:number}, note}`, exact category names only | 600 | Budget + BudgetNote |
-| paste | `{entries:[{type,category,label,amount,note}]}`, input ≤ 4,000 chars, amounts in the display currency | 1500 | only after user confirms |
+| budget | `{budgets:{lineId:number}, note}`, one amount per plan line id | 600 | Budget + BudgetNote |
+| paste | `{entries:[{type,category,lineId,label,amount,note}]}`, input ≤ 4,000 chars, amounts in the display currency | 1500 | only after user confirms |
 
 - Max tokens is the budget for the visible answer. The client adds a fixed allowance for reasoning models, whose hidden reasoning counts against the same limit.
 - On a bad shape, toast "Couldn't read the AI reply, try again".

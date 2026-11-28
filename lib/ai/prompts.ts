@@ -1,5 +1,6 @@
 import 'server-only';
 import { categoriesOf } from '@/lib/calc';
+import { PLAN, PLAN_LINES, type Split } from '@/lib/plan';
 import type { DisplayCurrency } from '@/lib/money';
 import type { EntryType, InsightKind, MonthData } from '@/lib/types';
 import type { AiMessage } from './types';
@@ -23,17 +24,38 @@ export function systemPrompt(currency: DisplayCurrency, json: boolean): string {
   );
 }
 
-/** The month as text: header, categories, budgets, then one line per entry. */
-export function monthContext(month: MonthData, budgets: Record<string, number>, currency: DisplayCurrency): string {
-  const budgetList = Object.entries(budgets);
-  const budgetLine = budgetList.length
-    ? '\nBudget set for this month: ' +
-      budgetList.map(([category, cents]) => category + ' ' + displayAmount(cents, currency)).join(', ')
+/** The plan the AI sees next to the month: this month's budgets by plan line id, carry-over and split. */
+export type PlanContext = {
+  lineBudgets: Record<string, number>;
+  carry: Record<string, number>;
+  split: Split;
+};
+
+/** Signed display amount for carry-over, e.g. +30.00 or -5.00. */
+function signedAmount(cents: number, currency: DisplayCurrency): string {
+  return (cents >= 0 ? '+' : '-') + displayAmount(Math.abs(cents), currency);
+}
+
+/**
+ * The month as text: header, the budget plan (sections, their lines and split targets),
+ * this month's budgets with carry-over, then one line per entry.
+ */
+export function monthContext(month: MonthData, plan: PlanContext, currency: DisplayCurrency): string {
+  const budgetParts = PLAN_LINES.filter((l) => plan.lineBudgets[l.id] != null || plan.carry[l.id] != null).map((l) => {
+    const amount = plan.lineBudgets[l.id] != null ? ' ' + displayAmount(plan.lineBudgets[l.id], currency) : '';
+    const carry = plan.carry[l.id] != null ? ' (carry-over ' + signedAmount(plan.carry[l.id], currency) + ')' : '';
+    return l.name + amount + carry;
+  });
+  const budgetLine = budgetParts.length
+    ? '\nBudget set for this month (carry-over is unused budget from earlier months, negative if overspent): ' +
+      budgetParts.join('; ')
     : '';
   return (
     'Month: ' + month.key + '. Currency: ' + currency.code + ' (' + currency.sym + ').' +
-    '\nExpense categories: ' + categoriesOf(month, 'Out').join(', ') +
-    '. Income categories: ' + categoriesOf(month, 'In').join(', ') + '.' +
+    '\nBudget plan, target share of income: ' + PLAN.map((s) => s.title + ' ' + plan.split[s.id] + '%').join(', ') + '.' +
+    '\nExpense categories by section:\n' +
+    PLAN.map((s) => s.title + ': ' + s.lines.map((l) => l.name).join('; ')).join('\n') +
+    '\nIncome categories: ' + categoriesOf(month, 'In').join(', ') + '.' +
     budgetLine +
     '\nEntries (type | category | item | amount):\n' +
     month.entries
@@ -74,45 +96,62 @@ export function budgetPrompt(input: {
   nextKey: string;
   currency: DisplayCurrency;
   expectedCents: number;
-  categories: readonly string[];
 }): string {
   return (
     input.context +
-    '\n\nTask: Suggest a realistic budget for each expense category for ' + input.nextKey +
+    '\n\nTask: Suggest a realistic budget for each expense line for ' + input.nextKey +
     ', based on this month. Treat one-off or annual items (like large insurance payments) as non-recurring unless they clearly repeat. Expected income: ' +
     input.currency.sym + displayAmount(input.expectedCents, input.currency) +
-    '. Use these category names exactly: ' + input.categories.join(', ') +
-    '.\nJSON: {"budgets": {"<category>": number}, "note": one or two sentences explaining the plan}'
+    '. Use these line ids exactly: ' + PLAN_LINES.map((l) => l.id).join(', ') +
+    '.\nJSON: {"budgets": {"<lineId>": number}, "note": one or two sentences explaining the plan}'
   );
 }
 
 /**
- * AI-6 (reference `runPaste`). The one change from the reference: OpenAI structured output
- * needs an object at the root, so the shape line asks for `{"entries": [...]}`.
+ * AI-6 (reference `runPaste`). Two changes from the reference: OpenAI structured output needs
+ * an object at the root, so the shape line asks for `{"entries": [...]}`; and expenses pick a
+ * fixed plan line (`lineId`) instead of a free-text category.
  */
 export function pastePrompt(input: {
-  categories: Record<EntryType, readonly string[]>;
+  incomeCategories: readonly string[];
   currency: DisplayCurrency;
   text: string;
 }): string {
   return (
-    'Extract every money entry from the text below. Expense categories: ' + input.categories.Out.join(', ') +
-    '. Income categories: ' + input.categories.In.join(', ') +
-    '. Use an existing category when it fits, otherwise a short new one. Amounts as plain numbers in ' + input.currency.code + '.' +
-    '\nReturn a JSON object: {"entries": [{"type": "Out" or "In", "category": string, "label": short merchant or source, "amount": number, "note": short string or ""}]}' +
+    'Extract every money entry from the text below. Expense lines (id = name) by section: ' + planLineList() +
+    '. Income categories: ' + input.incomeCategories.join(', ') +
+    '. For an expense set "lineId" to the best line id; for income use an existing category when it fits, otherwise a short new one, and set "lineId" to "". Amounts as plain numbers in ' + input.currency.code + '.' +
+    '\nReturn a JSON object: {"entries": [{"type": "Out" or "In", "category": string, "lineId": string, "label": short merchant or source, "amount": number, "note": short string or ""}]}' +
     '\n\nText:\n' + input.text
   );
 }
 
-/** AI-1 (reference `suggestCat`). */
+
+/** Every section with its lines as "id = name", for prompts that ask the AI to pick a plan line. */
+function planLineList(): string {
+  return PLAN.map((s) => s.title + ': ' + s.lines.map((l) => l.id + ' = ' + l.name).join('; ')).join('. ');
+}
+
+/**
+ * AI-1 (reference `suggestCat`). Expenses pick one of the fixed plan lines by id; income
+ * picks from the month's own categories.
+ */
 export function categorisePrompt(input: {
   type: EntryType;
   label: string;
   note: string;
   categories: readonly string[];
 }): string {
+  if (input.type === 'Out') {
+    return (
+      'Categorise this expense item: "' + input.label + '"' +
+      (input.note ? ' (note: ' + input.note + ')' : '') +
+      '. Pick the best category (id = name) from these sections: ' + planLineList() +
+      '. JSON: {"lineId": string}'
+    );
+  }
   return (
-    'Categorise this ' + (input.type === 'Out' ? 'expense' : 'income') + ' item: "' + input.label + '"' +
+    'Categorise this income item: "' + input.label + '"' +
     (input.note ? ' (note: ' + input.note + ')' : '') +
     '. Existing categories: ' + input.categories.join(', ') +
     '. Pick the best existing one; only propose a short new name if none fit. JSON: {"category": string}'

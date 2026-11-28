@@ -1,6 +1,6 @@
 import 'server-only';
-import type { EntryInput, EntryType, Insight, InsightKind } from '@/lib/types';
-import { placeEntry } from '@/lib/plan';
+import type { EntryInput, Insight, InsightKind } from '@/lib/types';
+import { getLine, PLAN_LINES, placeEntry, UNASSIGNED } from '@/lib/plan';
 import { displayToCents, type DisplayCurrency } from '@/lib/money';
 import {
   LIMITS,
@@ -25,7 +25,17 @@ export type CategorySuggestion = {
   /** An existing category's exact name, or a new name the AI proposed. */
   category: string;
   isNew: boolean;
+  /** Expenses only: the chosen plan section and line (category is the line's name). */
+  sectionId?: string;
+  lineId?: string;
 };
+
+/** AI-1 for expenses: the reply must name a real plan line id; anything else is rejected. */
+export function parseLineReply(value: unknown): CategorySuggestion | null {
+  if (!isRecord(value) || typeof value.lineId !== 'string') return null;
+  const line = getLine(value.lineId.trim());
+  return line ? { category: line.name, isNew: false, sectionId: line.sectionId, lineId: line.id } : null;
+}
 
 /** AI-1: match the reply to an existing category case-insensitively, else a valid new name. */
 export function parseCategoryReply(value: unknown, categories: readonly string[]): CategorySuggestion | null {
@@ -52,31 +62,27 @@ export function parseInsightReply(value: unknown, kind: InsightKind): Insight | 
 }
 
 export type BudgetSuggestion = {
-  /** Expense category → SGD cents. */
+  /** Plan line id → SGD cents. */
   budgets: Record<string, number>;
   note: string;
 };
 
 /**
- * AI-4: one amount per exact category name (unknown names are ignored), converted from the
- * display currency to SGD cents. Saving replaces every budget for next month, so a reply
- * with any missing, negative or non-finite amount is rejected whole: nothing is saved.
+ * AI-4: one amount per plan line id (unknown ids are ignored), converted from the display
+ * currency to SGD cents. Saving replaces every budget for next month, so a reply with any
+ * missing, negative or non-finite amount is rejected whole: nothing is saved.
  */
-export function parseBudgetReply(
-  value: unknown,
-  categories: readonly string[],
-  currency: DisplayCurrency,
-): BudgetSuggestion | null {
+export function parseBudgetReply(value: unknown, currency: DisplayCurrency): BudgetSuggestion | null {
   if (!isRecord(value) || !isRecord(value.budgets) || typeof value.note !== 'string') return null;
   const note = parseAiNote(value.note);
   if (note == null) return null;
   const budgets: Record<string, number> = {};
-  for (const category of categories) {
-    const cents = displayToCents(value.budgets[category], currency);
+  for (const line of PLAN_LINES) {
+    const cents = displayToCents(value.budgets[line.id], currency);
     if (cents == null || cents > LIMITS.maxAmountCents) return null;
-    budgets[category] = cents;
+    budgets[line.id] = cents;
   }
-  return categories.length > 0 ? { budgets, note } : null;
+  return { budgets, note };
 }
 
 function trimmedString(value: unknown): string | null {
@@ -84,14 +90,16 @@ function trimmedString(value: unknown): string | null {
 }
 
 /**
- * AI-6: preview rows from the paste reply. Each row needs a valid type, category and label
- * and an amount > 0 (display currency → SGD cents); an existing category of that type is
- * matched case-insensitively. Bad rows are dropped, an over-long note is cut, and at most
- * MAX_ENTRIES_PER_REQUEST rows are kept. Null when the reply has the wrong shape.
+ * AI-6: preview rows from the paste reply. Each row needs a valid type and label, an amount > 0
+ * (display currency → SGD cents) and, for income, a category (an existing one is matched
+ * case-insensitively). An expense takes the plan line the AI named; an unknown or empty line id
+ * falls back to the keyword rules, then to Unassigned. Bad rows are dropped, an over-long note
+ * is cut, and at most MAX_ENTRIES_PER_REQUEST rows are kept. Null when the reply has the
+ * wrong shape.
  */
 export function parsePasteReply(
   value: unknown,
-  categories: Record<EntryType, readonly string[]>,
+  incomeCategories: readonly string[],
   currency: DisplayCurrency,
 ): EntryInput[] | null {
   if (!isRecord(value) || !Array.isArray(value.entries)) return null;
@@ -105,10 +113,22 @@ export function parsePasteReply(
     const amountCents = displayToCents(item.amount, currency);
     if (!type || !name || !label || label.length > LIMITS.label) continue;
     if (amountCents == null || amountCents <= 0 || amountCents > LIMITS.maxAmountCents) continue;
-    const category = categories[type].find((c) => c.toLowerCase() === name.toLowerCase()) ?? name;
     const note = (trimmedString(item.note) ?? '').slice(0, LIMITS.note);
-    const placed = type === 'Out' ? placeEntry({ label, note, category }) : { sectionId: null, lineId: null };
-    rows.push({ type, category, label, amountCents, note, ...placed });
+    if (type === 'In') {
+      const category = incomeCategories.find((c) => c.toLowerCase() === name.toLowerCase()) ?? name;
+      rows.push({ type, category, label, amountCents, note, sectionId: null, lineId: null });
+      continue;
+    }
+    const line = getLine(typeof item.lineId === 'string' ? item.lineId.trim() : '') ?? getLine(placeEntry({ label, note, category: name }).lineId);
+    rows.push({
+      type,
+      category: line ? line.name : UNASSIGNED,
+      label,
+      amountCents,
+      note,
+      sectionId: line?.sectionId ?? null,
+      lineId: line?.id ?? null,
+    });
   }
   return rows;
 }

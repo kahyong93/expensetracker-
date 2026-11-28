@@ -97,8 +97,15 @@ export async function setLineBudget(monthKey: string, lineId: string, cents: num
   ]);
 }
 
-/** Replace every budget for a month with these plan lines (P5 "Fill with…"). Keeps the AI note. */
-export async function replaceLineBudgets(monthKey: string, budgets: Record<string, number>): Promise<void> {
+/**
+ * Replace every budget for a month with these plan lines (P5 "Fill with…", AI-4). With `aiNote`
+ * (even empty), also stores the AI note; otherwise the note is kept.
+ */
+export async function replaceLineBudgets(
+  monthKey: string,
+  budgets: Record<string, number>,
+  aiNote?: string,
+): Promise<void> {
   const rows = Object.entries(budgets).flatMap(([lineId, amountCents]) => {
     const line = getLine(lineId);
     return line ? [{ monthKey, categoryName: line.name, lineId, amountCents }] : [];
@@ -106,6 +113,14 @@ export async function replaceLineBudgets(monthKey: string, budgets: Record<strin
   const userId = await requireUserId();
   const batch: Batch = [...ensurePlan(userId, monthKey), db.delete(budgetLines).where(linesOf(userId, monthKey))];
   if (rows.length > 0) batch.push(db.insert(budgetLines).values(rows.map((r) => ({ ...r, userId }))));
+  if (aiNote !== undefined) {
+    batch.push(
+      db
+        .update(monthPlans)
+        .set({ aiNote: aiNote || null })
+        .where(and(eq(monthPlans.userId, userId), eq(monthPlans.monthKey, monthKey))),
+    );
+  }
   await db.batch(batch);
 }
 

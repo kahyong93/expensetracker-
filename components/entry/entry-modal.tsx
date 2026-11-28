@@ -9,7 +9,7 @@ import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { categoriesOf } from "@/lib/calc";
 import type { Entry, EntryType } from "@/lib/types";
-import { getSection, PLAN, PLAN_LINES, placeEntry } from "@/lib/plan";
+import { getSection, PLAN, PLAN_LINES } from "@/lib/plan";
 import { centsToInput, type PrefilledAmount } from "@/lib/money";
 import { monthHref, tabFromPathname } from "@/lib/months";
 import { pendingEntryId } from "@/lib/optimistic";
@@ -131,16 +131,13 @@ export function EntryModal({ request, onClose }: { request: EntryModalRequest; o
     }
     const proposed = res.data.category.trim();
     if (form.type === "Out") {
-      // Until the AI picks plan lines itself: match its answer to a line name, else the keyword rules.
-      const line =
-        PLAN_LINES.find((l) => l.name.toLowerCase() === proposed.toLowerCase()) ??
-        PLAN_LINES.find((l) => l.id === placeEntry({ label, note: form.note, category: proposed }).lineId);
-      if (!line) {
+      // Expenses: the AI picked a plan line, so both selects are filled.
+      if (!res.data.sectionId || !res.data.lineId) {
         toast("No matching category, please pick one");
         return;
       }
-      set({ sectionId: line.sectionId, lineId: line.id });
-      toast(`Suggested category: ${line.name}`);
+      set({ sectionId: res.data.sectionId, lineId: res.data.lineId });
+      toast(`Suggested category: ${proposed}`);
       return;
     }
     const hit = categories.find((c) => c.toLowerCase() === proposed.toLowerCase());

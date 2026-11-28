@@ -1,4 +1,5 @@
 import 'server-only';
+import { PLAN_LINES } from '@/lib/plan';
 import type { JsonSchema } from './types';
 
 /**
@@ -12,6 +13,15 @@ export const CATEGORY_SCHEMA: JsonSchema = {
   type: 'object',
   properties: { category: { type: 'string', description: 'An existing category name, or a short new one' } },
   required: ['category'],
+  additionalProperties: false,
+};
+
+/** AI-1 for expenses: `{ lineId }`, one of the fixed plan line ids. */
+export const CATEGORY_LINE_SCHEMA: JsonSchema = {
+  title: 'category_line_reply',
+  type: 'object',
+  properties: { lineId: { type: 'string', enum: PLAN_LINES.map((l) => l.id), description: 'The id of the best plan line' } },
+  required: ['lineId'],
   additionalProperties: false,
 };
 
@@ -35,16 +45,17 @@ export const INSIGHT_SCHEMA: JsonSchema = {
   additionalProperties: false,
 };
 
-/** AI-4: `{ budgets: { <each expense category>: number }, note }`, built per request. */
-export function budgetSchema(categories: readonly string[]): JsonSchema {
+/** AI-4: `{ budgets: { <each plan line id>: number }, note }`. */
+export function budgetSchema(): JsonSchema {
+  const ids = PLAN_LINES.map((l) => l.id);
   return {
     title: 'budget_reply',
     type: 'object',
     properties: {
       budgets: {
         type: 'object',
-        properties: Object.fromEntries(categories.map((c) => [c, { type: 'number' }])),
-        required: [...categories],
+        properties: Object.fromEntries(ids.map((id) => [id, { type: 'number' }])),
+        required: ids,
         additionalProperties: false,
       },
       note: { type: 'string' },
@@ -54,7 +65,7 @@ export function budgetSchema(categories: readonly string[]): JsonSchema {
   };
 }
 
-/** AI-6: `{ entries: [{ type, category, label, amount, note }] }`. */
+/** AI-6: `{ entries: [{ type, category, lineId, label, amount, note }] }`. `lineId` is '' for income. */
 export const PASTE_SCHEMA: JsonSchema = {
   title: 'paste_reply',
   type: 'object',
@@ -66,11 +77,12 @@ export const PASTE_SCHEMA: JsonSchema = {
         properties: {
           type: { type: 'string', enum: ['Out', 'In'] },
           category: { type: 'string' },
+          lineId: { type: 'string', enum: ['', ...PLAN_LINES.map((l) => l.id)] },
           label: { type: 'string' },
           amount: { type: 'number' },
           note: { type: 'string' },
         },
-        required: ['type', 'category', 'label', 'amount', 'note'],
+        required: ['type', 'category', 'lineId', 'label', 'amount', 'note'],
         additionalProperties: false,
       },
     },

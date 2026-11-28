@@ -26,6 +26,23 @@ const CATEGORY_HINTS: Array<{ words: string[]; category: string }> = [
   { words: ['interest', 'dbs', 'ocbc', 'uob', 'cdp'], category: 'Interest' },
 ];
 
+/** Plan line ids the fake picks for an expense, by keyword (AI-1). */
+const LINE_HINTS: Array<{ words: string[]; lineId: string }> = [
+  { words: ['kopi', 'rice', 'food', 'lunch', 'dinner', 'coffee', 'mcd', 'bread', 'sheng', 'ntuc'], lineId: 'groceries' },
+  { words: ['grab', 'mrt', 'bus', 'taxi', 'gojek', 'transport', 'ez-link'], lineId: 'transport' },
+  { words: ['rent', 'rental'], lineId: 'rent' },
+  { words: ['telco', 'telcom', 'singtel'], lineId: 'phone' },
+  { words: ['parent'], lineId: 'family' },
+  { words: ['uniqlo', 'shopee', 'lazada'], lineId: 'shopping' },
+  { words: ['insurance'], lineId: 'insurance' },
+];
+
+/** AI-1 for expenses: always a real line id, so the form can fill both selects. */
+function fakeLine(prompt: string): { lineId: string } {
+  const label = (/item: "([^"]*)"/.exec(prompt)?.[1] ?? '').toLowerCase();
+  return { lineId: LINE_HINTS.find((h) => h.words.some((w) => label.includes(w)))?.lineId ?? 'shopping' };
+}
+
 /** AI-1: reads the item name out of the categorise prompt. */
 function fakeCategory(prompt: string): { category: string } {
   const label = (/item: "([^"]*)"/.exec(prompt)?.[1] ?? '').toLowerCase();
@@ -60,22 +77,22 @@ const FAKE_TIPS = {
   ],
 };
 
-/** AI-6: three usable rows (one in a new category) and one the reply check drops. */
+/** AI-6: three usable rows (one with no line, so it lands in Unassigned) and one the reply check drops. */
 const FAKE_PASTE = {
   entries: [
-    { type: 'Out', category: 'Transport', label: 'Grab', amount: 12.5, note: '03 Feb' },
-    { type: 'Out', category: 'Food', label: 'Kopi', amount: 1.8, note: '' },
-    { type: 'Out', category: 'Pets', label: 'Vet visit', amount: 45, note: '' },
-    { type: 'Out', category: 'Food', label: '', amount: 3, note: '' },
+    { type: 'Out', category: 'Transport', lineId: 'transport', label: 'Grab', amount: 12.5, note: '03 Feb' },
+    { type: 'Out', category: 'Food', lineId: 'groceries', label: 'Kopi', amount: 1.8, note: '' },
+    { type: 'Out', category: 'Pets', lineId: '', label: 'Vet visit', amount: 45, note: '' },
+    { type: 'Out', category: 'Food', lineId: 'groceries', label: '', amount: 3, note: '' },
   ],
 };
 
-/** AI-4: 100 (display currency) for every category the form lists. */
+/** AI-4: 100 (display currency) for every plan line the form lists. */
 function fakeBudget(schema: JsonSchema): { budgets: Record<string, number>; note: string } {
   const form = schema.properties.budgets as { properties?: Record<string, unknown> } | undefined;
-  const categories = Object.keys(form?.properties ?? {});
+  const lineIds = Object.keys(form?.properties ?? {});
   return {
-    budgets: Object.fromEntries(categories.map((c) => [c, 100])),
+    budgets: Object.fromEntries(lineIds.map((id) => [id, 100])),
     note: 'I set every category to 100 to keep next month simple.',
   };
 }
@@ -91,7 +108,7 @@ export async function fakeCompleteJson(request: AiRequest & { schema: JsonSchema
   const prompt = lastUserMessage(request);
   switch (request.task) {
     case 'categorise':
-      return fakeCategory(prompt);
+      return prompt.startsWith('Categorise this expense') ? fakeLine(prompt) : fakeCategory(prompt);
     case 'summary':
       return FAKE_SUMMARY;
     case 'alerts':

@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { CURRENCIES } from '@/lib/money';
 import type { MonthData } from '@/lib/types';
+import { PLAN_LINES } from '@/lib/plan';
 import { LIMITS } from '@/lib/validation';
-import { parseBudgetReply, parseCategoryReply, parseInsightReply, parsePasteReply } from './parse';
+import { parseBudgetReply, parseCategoryReply, parseInsightReply, parseLineReply, parsePasteReply } from './parse';
 import { budgetPrompt, categorisePrompt, chatMessages, insightPrompt, monthContext, pastePrompt, systemPrompt } from './prompts';
-import { budgetSchema } from './schemas';
+import { budgetSchema, CATEGORY_LINE_SCHEMA as lineSchema, PASTE_SCHEMA as pasteSchema } from './schemas';
 import { createRateLimiter } from './rate-limit';
 
 const SGD = CURRENCIES[0];
@@ -31,24 +32,74 @@ describe('systemPrompt', () => {
 });
 
 describe('monthContext', () => {
-  it('lists categories and entries with amounts in the display currency', () => {
-    expect(monthContext(MONTH, {}, USD)).toBe(
-      'Month: Jan-25. Currency: USD (US$).\nExpense categories: Food, Transport. Income categories: Work.' +
-        '\nEntries (type | category | item | amount):\nOut | Food | Kopi | 0.90\nIn | Work | Salary (Jan pay) | 2500.00',
-    );
+  const NO_PLAN = { lineBudgets: {}, carry: {}, split: { needs: 50, invest: 20, fun: 30 } };
+
+  it('lists the plan sections, their lines, the split targets and the entries in the display currency', () => {
+    const text = monthContext(MONTH, NO_PLAN, USD);
+    expect(text.startsWith('Month: Jan-25. Currency: USD (US$).\n')).toBe(true);
+    expect(text).toContain('Budget plan, target share of income: Basic Needs 50%, Investment / Savings 20%, Entertainment 30%.');
+    expect(text).toContain('Expense categories by section:\nBasic Needs: Rent / mortgage; Utilities; Phone and internet;');
+    expect(text).toContain('\nInvestment / Savings: Emergency fund;');
+    expect(text).toContain('\nEntertainment: Dining out and food delivery;');
+    expect(text).toContain('\nIncome categories: Work.');
+    expect(text).toContain('\nEntries (type | category | item | amount):\nOut | Food | Kopi | 0.90\nIn | Work | Salary (Jan pay) | 2500.00');
+    expect(text).not.toContain('Budget set for this month');
   });
 
-  it('adds the budget line when budgets are set', () => {
-    expect(monthContext(MONTH, { Food: 20000 }, SGD)).toContain('\nBudget set for this month: Food 200.00\n');
+  it("adds this month's budgets per line, with carry-over", () => {
+    const text = monthContext(
+      MONTH,
+      { lineBudgets: { groceries: 20000, rent: 80000 }, carry: { groceries: 3000, util: -500 }, split: NO_PLAN.split },
+      SGD,
+    );
+    expect(text).toContain(
+      '\nBudget set for this month (carry-over is unused budget from earlier months, negative if overspent): ' +
+        'Rent / mortgage 800.00; Utilities (carry-over -5.00); Groceries 200.00 (carry-over +30.00)\n',
+    );
   });
 });
 
 describe('categorisePrompt', () => {
-  it('matches the reference wording', () => {
-    expect(categorisePrompt({ type: 'Out', label: 'Kopi', note: 'with Ann', categories: ['Food', 'Transport'] })).toBe(
-      'Categorise this expense item: "Kopi" (note: with Ann). Existing categories: Food, Transport. Pick the best existing one; only propose a short new name if none fit. JSON: {"category": string}',
+  it('keeps the reference wording for income', () => {
+    expect(categorisePrompt({ type: 'In', label: 'Bonus', note: 'Dec', categories: ['Work', 'Interest'] })).toBe(
+      'Categorise this income item: "Bonus" (note: Dec). Existing categories: Work, Interest. Pick the best existing one; only propose a short new name if none fit. JSON: {"category": string}',
     );
-    expect(categorisePrompt({ type: 'In', label: 'Bonus', note: '', categories: [] })).toMatch(/^Categorise this income item: "Bonus"\. /);
+  });
+});
+
+describe('suggest category for expenses (AI-1)', () => {
+  it('asks the AI to pick a plan line id, listing every section and line', () => {
+    const prompt = categorisePrompt({ type: 'Out', label: 'Kopi', note: 'with Ann', categories: ['Food'] });
+    expect(prompt.startsWith('Categorise this expense item: "Kopi" (note: with Ann). Pick the best category (id = name) from these sections: ')).toBe(true);
+    expect(prompt).toContain('Basic Needs: rent = Rent / mortgage; util = Utilities;');
+    expect(prompt).toContain('Investment / Savings: emergency = Emergency fund;');
+    expect(prompt).toContain('Entertainment: dining = Dining out and food delivery;');
+    expect(prompt.endsWith('. JSON: {"lineId": string}')).toBe(true);
+    expect(prompt).not.toContain('Food');
+  });
+
+  it('reads a line id back as its section, line and name', () => {
+    expect(parseLineReply({ lineId: ' groceries ' })).toEqual({
+      category: 'Groceries',
+      isNew: false,
+      sectionId: 'needs',
+      lineId: 'groceries',
+    });
+  });
+
+  it('rejects unknown line ids and bad shapes', () => {
+    expect(parseLineReply({ lineId: 'pets' })).toBeNull();
+    expect(parseLineReply({ lineId: 'Groceries' })).toBeNull();
+    expect(parseLineReply({ category: 'Groceries' })).toBeNull();
+    expect(parseLineReply({ lineId: 7 })).toBeNull();
+    expect(parseLineReply(null)).toBeNull();
+  });
+
+  it('forces the form to one of the real line ids', () => {
+    const enumIds = (lineSchema.properties.lineId as { enum: string[] }).enum;
+    expect(enumIds).toHaveLength(23);
+    expect(enumIds).toContain('groceries');
+    expect(lineSchema.required).toEqual(['lineId']);
   });
 });
 
@@ -165,58 +216,115 @@ describe('tips (AI-7)', () => {
 });
 
 describe('smart budget (AI-4)', () => {
-  const cats = ['Food', 'Fixed & Bills'];
+  const allLines = (amount: unknown) => Object.fromEntries(PLAN_LINES.map((l) => [l.id, amount]));
 
-  it('uses the reference budget task with expected income in the display currency', () => {
-    expect(budgetPrompt({ context: 'CTX', nextKey: 'Feb-25', currency: USD, expectedCents: 500000, categories: cats })).toBe(
-      'CTX\n\nTask: Suggest a realistic budget for each expense category for Feb-25, based on this month. Treat one-off or annual items (like large insurance payments) as non-recurring unless they clearly repeat. Expected income: US$2500.00. Use these category names exactly: Food, Fixed & Bills.' +
-        '\nJSON: {"budgets": {"<category>": number}, "note": one or two sentences explaining the plan}',
-    );
+  it('asks for one amount per plan line id, with expected income in the display currency', () => {
+    const prompt = budgetPrompt({ context: 'CTX', nextKey: 'Feb-25', currency: USD, expectedCents: 500000 });
+    expect(prompt.startsWith('CTX\n\nTask: Suggest a realistic budget for each expense line for Feb-25, based on this month.')).toBe(true);
+    expect(prompt).toContain('Treat one-off or annual items (like large insurance payments) as non-recurring unless they clearly repeat. Expected income: US$2500.00.');
+    expect(prompt).toContain('Use these line ids exactly: rent, util, phone,');
+    expect(prompt).toContain(', gifts.');
+    expect(prompt.endsWith('\nJSON: {"budgets": {"<lineId>": number}, "note": one or two sentences explaining the plan}')).toBe(true);
   });
 
-  it('builds a strict form with one required number per category', () => {
-    const schema = budgetSchema(cats);
+  it('builds a strict form with one required number per plan line', () => {
+    const schema = budgetSchema();
     const budgets = schema.properties.budgets as { properties: Record<string, unknown>; required: string[]; additionalProperties: boolean };
-    expect(Object.keys(budgets.properties)).toEqual(cats);
-    expect(budgets.required).toEqual(cats);
+    expect(Object.keys(budgets.properties)).toEqual(PLAN_LINES.map((l) => l.id));
+    expect(budgets.required).toEqual(PLAN_LINES.map((l) => l.id));
     expect(budgets.additionalProperties).toBe(false);
     expect(schema.required).toEqual(['budgets', 'note']);
   });
 
-  it('keeps exact category names, converts display amounts to SGD cents, and keeps the note', () => {
-    expect(parseBudgetReply({ budgets: { Food: 50, 'Fixed & Bills': 0, Pets: 50 }, note: ' Trimmed a little. ' }, cats, USD)).toEqual({
-      budgets: { Food: 10000, 'Fixed & Bills': 0 },
-      note: 'Trimmed a little.',
-    });
+  it('keeps exact line ids, converts display amounts to SGD cents, and keeps the note', () => {
+    const reply = { budgets: { ...allLines(0), groceries: 50, pets: 99 }, note: ' Trimmed a little. ' };
+    const parsed = parseBudgetReply(reply, USD);
+    expect(parsed?.note).toBe('Trimmed a little.');
+    expect(parsed?.budgets.groceries).toBe(10000);
+    expect(parsed?.budgets.rent).toBe(0);
+    expect(Object.keys(parsed?.budgets ?? {})).toHaveLength(23);
+    expect(parsed?.budgets).not.toHaveProperty('pets');
   });
 
-  it('rejects the whole reply when any category is missing or has a bad amount, so nothing is saved', () => {
-    expect(parseBudgetReply({ budgets: { Food: -5, 'Fixed & Bills': 20 }, note: '' }, cats, SGD)).toBeNull();
-    expect(parseBudgetReply({ budgets: { Food: Number.NaN, 'Fixed & Bills': 20 }, note: '' }, cats, SGD)).toBeNull();
-    expect(parseBudgetReply({ budgets: { Food: 5 }, note: 'x' }, cats, SGD)).toBeNull(); // Fixed & Bills missing
-    expect(parseBudgetReply({ budgets: { Food: 5, 'Fixed & Bills': 1 }, note: 42 }, cats, SGD)).toBeNull();
-    expect(parseBudgetReply({ budgets: 'nope', note: 'x' }, cats, SGD)).toBeNull();
+  it('rejects the whole reply when any line is missing or has a bad amount, so nothing is saved', () => {
+    expect(parseBudgetReply({ budgets: { ...allLines(5), rent: -5 }, note: '' }, SGD)).toBeNull();
+    expect(parseBudgetReply({ budgets: { ...allLines(5), rent: Number.NaN }, note: '' }, SGD)).toBeNull();
+    const missing = allLines(5);
+    delete missing.util;
+    expect(parseBudgetReply({ budgets: missing, note: 'x' }, SGD)).toBeNull();
+    expect(parseBudgetReply({ budgets: allLines(5), note: 42 }, SGD)).toBeNull();
+    expect(parseBudgetReply({ budgets: 'nope', note: 'x' }, SGD)).toBeNull();
   });
 });
 
 describe('paste to add (AI-6)', () => {
-  const cats = { Out: ['Food', 'Transport'], In: ['Work'] };
-  const row = (over: Record<string, unknown> = {}) => ({ type: 'Out', category: 'food', label: 'Kopi', amount: 0.9, note: '', ...over });
-
-  it('uses the reference paste task, asking for an object with an entries array', () => {
-    expect(pastePrompt({ categories: cats, currency: USD, text: 'Kopi 1.80' })).toBe(
-      'Extract every money entry from the text below. Expense categories: Food, Transport. Income categories: Work. Use an existing category when it fits, otherwise a short new one. Amounts as plain numbers in USD.' +
-        '\nReturn a JSON object: {"entries": [{"type": "Out" or "In", "category": string, "label": short merchant or source, "amount": number, "note": short string or ""}]}' +
-        '\n\nText:\nKopi 1.80',
-    );
+  const income = ['Work'];
+  const row = (over: Record<string, unknown> = {}) => ({
+    type: 'Out',
+    category: 'food',
+    lineId: 'groceries',
+    label: 'Kopi',
+    amount: 0.9,
+    note: '',
+    ...over,
   });
 
-  it('matches existing categories by type, converts amounts to SGD cents, and keeps new categories', () => {
-    expect(
-      parsePasteReply({ entries: [row(), row({ type: 'In', category: 'Bonus', label: 'Year-end', amount: 50, note: 'Dec' })] }, cats, USD),
-    ).toEqual([
-      // Expenses are placed by the keyword rules until the AI picks lines itself (food -> Groceries).
-      { type: 'Out', category: 'Food', label: 'Kopi', amountCents: 180, note: '', sectionId: 'needs', lineId: 'groceries' },
+  it('asks for a plan line id on every expense, and an object with an entries array', () => {
+    const prompt = pastePrompt({ incomeCategories: income, currency: USD, text: 'Kopi 1.80' });
+    expect(prompt.startsWith('Extract every money entry from the text below. Expense lines (id = name) by section: Basic Needs: rent = Rent / mortgage;')).toBe(true);
+    expect(prompt).toContain(' Income categories: Work. ');
+    expect(prompt).toContain('For an expense set "lineId" to the best line id; for income use an existing category when it fits, otherwise a short new one, and set "lineId" to "".');
+    expect(prompt).toContain('Amounts as plain numbers in USD.');
+    expect(prompt).toContain(
+      '\nReturn a JSON object: {"entries": [{"type": "Out" or "In", "category": string, "lineId": string, "label": short merchant or source, "amount": number, "note": short string or ""}]}',
+    );
+    expect(prompt.endsWith('\n\nText:\nKopi 1.80')).toBe(true);
+  });
+
+  it('forces each row to a real line id, or an empty one for income', () => {
+    const items = (pasteSchema.properties.entries as { items: { properties: { lineId: { enum: string[] } }; required: string[] } }).items;
+    expect(items.properties.lineId.enum).toHaveLength(24);
+    expect(items.properties.lineId.enum).toContain('');
+    expect(items.properties.lineId.enum).toContain('dining');
+    expect(items.required).toContain('lineId');
+  });
+
+  it('gives an expense its line, section and the line name as category, and converts to SGD cents', () => {
+    expect(parsePasteReply({ entries: [row({ lineId: 'dining', label: 'Grab Food', amount: 50 })] }, income, USD)).toEqual([
+      { type: 'Out', category: 'Dining out and food delivery', label: 'Grab Food', amountCents: 10000, note: '', sectionId: 'fun', lineId: 'dining' },
+    ]);
+  });
+
+  it('falls back to the keyword rules when the line id is unknown or empty, then to Unassigned', () => {
+    const rows = parsePasteReply(
+      {
+        entries: [
+          row({ lineId: 'pets', label: 'Netflix' }),
+          row({ lineId: '', label: 'Vet visit', category: 'Pets' }),
+        ],
+      },
+      income,
+      SGD,
+    );
+    expect(rows).toEqual([
+      { type: 'Out', category: 'Streaming services', label: 'Netflix', amountCents: 90, note: '', sectionId: 'fun', lineId: 'streaming' },
+      { type: 'Out', category: 'Unassigned', label: 'Vet visit', amountCents: 90, note: '', sectionId: null, lineId: null },
+    ]);
+  });
+
+  it('matches existing income categories case-insensitively and keeps new ones, with no line', () => {
+    const rows = parsePasteReply(
+      {
+        entries: [
+          row({ type: 'In', category: 'work', lineId: '', label: 'Salary', amount: 100 }),
+          row({ type: 'In', category: 'Bonus', lineId: 'rent', label: 'Year-end', amount: 50, note: 'Dec' }),
+        ],
+      },
+      income,
+      USD,
+    );
+    expect(rows).toEqual([
+      { type: 'In', category: 'Work', label: 'Salary', amountCents: 20000, note: '', sectionId: null, lineId: null },
       { type: 'In', category: 'Bonus', label: 'Year-end', amountCents: 10000, note: 'Dec', sectionId: null, lineId: null },
     ]);
   });
@@ -234,15 +342,17 @@ describe('paste to add (AI-6)', () => {
           row({ note: 'n'.repeat(LIMITS.note + 10) }),
         ],
       },
-      cats,
+      income,
       SGD,
     );
-    expect(rows).toEqual([{ type: 'Out', category: 'Food', label: 'Kopi', amountCents: 90, note: 'n'.repeat(LIMITS.note), sectionId: 'needs', lineId: 'groceries' }]);
+    expect(rows).toEqual([
+      { type: 'Out', category: 'Groceries', label: 'Kopi', amountCents: 90, note: 'n'.repeat(LIMITS.note), sectionId: 'needs', lineId: 'groceries' },
+    ]);
   });
 
   it('keeps at most 200 rows and rejects a bad shape', () => {
-    expect(parsePasteReply({ entries: Array.from({ length: 250 }, () => row()) }, cats, SGD)).toHaveLength(200);
-    expect(parsePasteReply({ entries: 'nope' }, cats, SGD)).toBeNull();
-    expect(parsePasteReply([row()], cats, SGD)).toBeNull();
+    expect(parsePasteReply({ entries: Array.from({ length: 250 }, () => row()) }, income, SGD)).toHaveLength(200);
+    expect(parsePasteReply({ entries: 'nope' }, income, SGD)).toBeNull();
+    expect(parsePasteReply([row()], income, SGD)).toBeNull();
   });
 });
