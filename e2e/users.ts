@@ -7,6 +7,9 @@ import path from 'node:path';
 export const TEST_USERS = {
   a: 'cashflow-e2e-a+clerk_test@example.com',
   b: 'cashflow-e2e-b+clerk_test@example.com',
+  // Own users for the budget plan journey (plan.spec.ts): c at 1280px, d at 390px.
+  c: 'cashflow-e2e-c+clerk_test@example.com',
+  d: 'cashflow-e2e-d+clerk_test@example.com',
 } as const;
 export type TestUserKey = keyof typeof TEST_USERS;
 

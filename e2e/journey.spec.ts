@@ -46,10 +46,25 @@ const nav = (name: RegExp) => page.getByRole('navigation', { name: 'Main' }).get
 const entriesOf = async (userId: string, month = THIS) => (await snapshot(userId)).entries.filter((e) => e.month === month);
 const entryNamed = async (label: string, userId = ids.a) => (await entriesOf(userId)).find((e) => e.label === label);
 
-async function fillEntry(opts: { type?: 'Out' | 'In'; category?: string; newCategory?: string; label: string; amount: string; note?: string }) {
+type EntryOpts = {
+  type?: 'Out' | 'In';
+  /** Expenses: plan section and line, by their names. */
+  section?: string;
+  line?: string;
+  /** Income: an existing category, or a new one. */
+  category?: string;
+  newCategory?: string;
+  label: string;
+  amount: string;
+  note?: string;
+};
+
+async function fillEntry(opts: EntryOpts) {
   const d = dialog();
   if (opts.type) await d.getByRole('button', { name: opts.type === 'Out' ? 'Out · Expense' : 'In · Income' }).click();
   // Pick the category first: a picked category switches auto-categorise off (PRD AI-1).
+  if (opts.section) await d.getByLabel('Section', { exact: true }).selectOption({ label: opts.section });
+  if (opts.line) await d.getByLabel('Category', { exact: true }).selectOption({ label: opts.line });
   if (opts.newCategory) {
     await d.getByLabel('Category', { exact: true }).selectOption({ label: '+ New category…' });
     await d.getByLabel('New category name').fill(opts.newCategory);
@@ -62,8 +77,8 @@ async function fillEntry(opts: { type?: 'Out' | 'In'; category?: string; newCate
   await d.getByRole('button', { name: 'Save' }).click();
 }
 
-async function addItem(opts: Parameters<typeof fillEntry>[0]) {
-  await page.getByRole('button', { name: '+ Add item' }).click();
+async function addItem(opts: EntryOpts) {
+  await page.getByRole('button', { name: /Add item/ }).click();
   await expect(dialog()).toBeVisible();
   await fillEntry(opts);
   await expect(dialog()).toBeHidden();
@@ -132,7 +147,7 @@ test('E1/E7: invalid input is rejected with the PRD message and nothing is saved
 });
 
 test('E1/D1-D3: add an expense and an income; totals update and rows land in Neon', async () => {
-  await addItem({ category: 'Food', label: 'Lunch', amount: '12.50', note: 'team lunch' });
+  await addItem({ section: 'Basic Needs', line: 'Groceries', label: 'Lunch', amount: '12.50', note: 'team lunch' });
   await toast(page, 'Item added');
   await expect(page).toHaveURL(new RegExp(`/m/${THIS}$`)); // E6: stays on the Dashboard
   await expectTotals('S$0.00', 'S$12.50', '−S$12.50');
@@ -141,13 +156,14 @@ test('E1/D1-D3: add an expense and an income; totals update and rows land in Neo
   await expectTotals('S$3,000.00', 'S$12.50', 'S$2,987.50');
   await expect(totals()).toContainText('99.6% saved');
 
-  await expect.poll(async () => (await entriesOf(ids.a)).map((e) => [e.type, e.category, e.label, e.cents, e.note]).sort())
-    .toEqual([['In', 'Work', 'Salary', 300000, null], ['Out', 'Food', 'Lunch', 1250, 'team lunch']].sort());
+  // The expense is saved with its section and line; its category is named after the line.
+  await expect.poll(async () => (await entriesOf(ids.a)).map((e) => [e.type, e.category, e.label, e.cents, e.note, e.sectionId, e.lineId]).sort())
+    .toEqual([['In', 'Work', 'Salary', 300000, null, null, null], ['Out', 'Groceries', 'Lunch', 1250, 'team lunch', 'needs', 'groceries']].sort());
 });
 
 test('E5: edit an item; the new amount is stored and survives a reload', async () => {
   await nav(/^Expenses/).click();
-  await column('Food').getByRole('button', { name: 'Edit Lunch' }).click();
+  await column('Groceries').getByRole('button', { name: 'Edit Lunch' }).click();
   await expect(dialog().getByLabel(/^Amount/)).toHaveValue('12.50');
   await dialog().getByLabel(/^Amount/).fill('15');
   await dialog().getByRole('button', { name: 'Save' }).click();
@@ -156,104 +172,144 @@ test('E5: edit an item; the new amount is stored and survives a reload', async (
 
   await page.reload();
   await expectTotals('S$3,000.00', 'S$15.00', 'S$2,985.00');
-  await expect(column('Food')).toContainText('S$15.00');
+  await expect(column('Groceries')).toContainText('S$15.00');
 });
 
 test('B7/B6: move with "Move to…" and with drag and drop', async () => {
-  await column('Food').getByLabel('Move Lunch to category').selectOption('Transport');
+  await column('Groceries').getByLabel('Move Lunch to category').selectOption('Transport');
   await toast(page, 'Moved "Lunch" to Transport');
   await expect(column('Transport')).toContainText('Lunch');
-  await expect.poll(async () => (await entryNamed('Lunch'))?.category).toBe('Transport');
+  await expect.poll(async () => (await entryNamed('Lunch'))?.lineId).toBe('transport');
 
-  await column('Transport').getByText('Lunch', { exact: true }).dragTo(column('Food'));
-  await toast(page, 'Moved "Lunch" to Food');
-  await expect(column('Food')).toContainText('Lunch');
-  await expect.poll(async () => (await entryNamed('Lunch'))?.category).toBe('Food');
+  // Native HTML5 drag and drop. Both columns must be on screen: scrolling while the button is
+  // down cancels a drag, and Groceries sits on the second row of the Basic Needs grid.
+  await page.setViewportSize({ width: 1280, height: 1800 });
+  await column('Transport').getByText('Lunch', { exact: true }).dragTo(column('Groceries'));
+  await toast(page, 'Moved "Lunch" to Groceries');
+  await expect(column('Groceries')).toContainText('Lunch');
+  await expect.poll(async () => (await entryNamed('Lunch'))?.lineId).toBe('groceries');
+  await page.setViewportSize({ width: 1280, height: 900 });
 });
 
 test('B2/B8/B5: search, "+ Add to", delete with confirm', async () => {
-  await column('Shopping & Insurance').getByRole('button', { name: '+ Add to Shopping & Insurance' }).click();
-  await expect(dialog().getByLabel('Category', { exact: true })).toHaveValue('Shopping & Insurance');
+  await column('Shopping').getByRole('button', { name: '+ Add to Shopping' }).click();
+  await expect(dialog().getByLabel('Section', { exact: true })).toHaveValue('fun');
+  await expect(dialog().getByLabel('Category', { exact: true })).toHaveValue('shopping');
   await fillEntry({ label: 'Shoes', amount: '80' });
-  await expect(column('Shopping & Insurance')).toContainText('Shoes');
+  await expect(column('Shopping')).toContainText('Shoes');
   await expect.poll(async () => (await entryNamed('Shoes'))?.cents).toBe(8000);
 
   await page.getByPlaceholder('Search items, e.g. Uniqlo').fill('lun');
-  await expect(column('Food')).toContainText('Lunch');
-  await expect(column('Shopping & Insurance')).not.toContainText('Shoes');
+  await expect(column('Groceries')).toContainText('Lunch');
+  await expect(column('Shopping')).not.toContainText('Shoes');
   await page.getByPlaceholder('Search items, e.g. Uniqlo').fill('');
 
-  await column('Shopping & Insurance').getByRole('button', { name: 'Delete Shoes' }).click();
-  await expect(dialog()).toContainText('Delete "Shoes" (S$80.00) from Shopping & Insurance?');
+  await column('Shopping').getByRole('button', { name: 'Delete Shoes' }).click();
+  await expect(dialog()).toContainText('Delete "Shoes" (S$80.00) from Shopping?');
   await confirmWith('Delete');
   await toast(page, 'Item deleted');
   await expect.poll(async () => await entryNamed('Shoes')).toBeUndefined();
 });
 
-test('B9-B11: create, rename and delete-empty-only categories', async () => {
+test('S2: the Expenses board groups plan lines by section; income keeps + Category', async () => {
+  const headings = page.getByRole('heading', { level: 2 });
+  await expect(page.getByRole('region', { name: 'Basic Needs', exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Investment / Savings', exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Entertainment', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '+ Category' })).toHaveCount(0);
+  await expect(column('Groceries').getByRole('button', { name: /^Rename/ })).toHaveCount(0);
+  // The first Basic Needs columns come in budget-page order.
+  const needs = page.getByRole('region', { name: 'Basic Needs', exact: true });
+  await expect(needs.getByRole('heading', { level: 2 })).toHaveText([
+    '1. Basic Needs Fixed costs', 'Rent / mortgage', 'Utilities', 'Phone and internet', 'Transport', 'Groceries', 'Insurance',
+    'Loan or debt repayments', 'Family support', 'Childcare or education fees', 'Essential subscriptions',
+  ]);
+  void headings;
+});
+
+test('B9-B11: create, rename and delete-empty-only categories (Income board)', async () => {
+  await nav(/^Income/).click();
   await page.getByRole('button', { name: '+ Category' }).click();
-  await dialog().getByLabel('Category name').fill('Pets');
+  await dialog().getByLabel('Category name').fill('Side gigs');
   await dialog().getByRole('button', { name: 'Save' }).click();
-  await toast(page, 'Added "Pets"');
-  await expect(column('Pets')).toBeVisible();
+  await toast(page, 'Added "Side gigs"');
+  await expect(column('Side gigs')).toBeVisible();
 
   // Duplicate (case-insensitive) is ignored.
   await page.getByRole('button', { name: '+ Category' }).click();
-  await dialog().getByLabel('Category name').fill('pets');
+  await dialog().getByLabel('Category name').fill('side gigs');
   await dialog().getByRole('button', { name: 'Save' }).click();
   await expect(dialog()).toBeHidden();
 
-  await column('Pets').getByRole('button', { name: 'Rename Pets' }).click();
-  await dialog().getByLabel('Category name').fill('Pet care');
+  await column('Side gigs').getByRole('button', { name: 'Rename Side gigs' }).click();
+  await dialog().getByLabel('Category name').fill('Side hustle');
   await dialog().getByRole('button', { name: 'Save' }).click();
-  await toast(page, 'Renamed to "Pet care"');
+  await toast(page, 'Renamed to "Side hustle"');
   const names = async () => (await snapshot(ids.a)).months[0].categories.map((c) => c.name);
-  await expect.poll(async () => (await names()).filter((n) => /^pet/i.test(n))).toEqual(['Pet care']);
+  await expect.poll(async () => (await names()).filter((n) => /^side/i.test(n))).toEqual(['Side hustle']);
 
   // Non-empty column can't be deleted.
-  await column('Food').getByRole('button', { name: 'Delete empty category Food' }).click();
-  await toast(page, 'Move or delete the 1 items in "Food" first');
+  await column('Work').getByRole('button', { name: 'Delete empty category Work' }).click();
+  await toast(page, 'Move or delete the 1 items in "Work" first');
 
-  await column('Pet care').getByRole('button', { name: 'Delete empty category Pet care' }).click();
-  await expect(dialog()).toContainText('Remove the empty "Pet care" column?');
+  await column('Side hustle').getByRole('button', { name: 'Delete empty category Side hustle' }).click();
+  await expect(dialog()).toContainText('Remove the empty "Side hustle" column?');
   await confirmWith('Remove');
-  await toast(page, 'Removed "Pet care"');
-  await expect.poll(names).not.toContain('Pet care');
+  await toast(page, 'Removed "Side hustle"');
+  await expect.poll(names).not.toContain('Side hustle');
 
   // Rename a category with items: items follow (B10).
-  await column('Transport').getByRole('button', { name: 'Rename Transport' }).click();
-  await dialog().getByLabel('Category name').fill('Travel');
+  await column('Work').getByRole('button', { name: 'Rename Work' }).click();
+  await dialog().getByLabel('Category name').fill('Job');
   await dialog().getByRole('button', { name: 'Save' }).click();
-  await toast(page, 'Renamed to "Travel"');
-  await column('Food').getByLabel('Move Lunch to category').selectOption('Travel');
-  await expect.poll(async () => (await entryNamed('Lunch'))?.category).toBe('Travel');
-  await column('Travel').getByRole('button', { name: 'Rename Travel' }).click();
-  await dialog().getByLabel('Category name').fill('Transport');
+  await toast(page, 'Renamed to "Job"');
+  await expect.poll(async () => (await entryNamed('Salary'))?.category).toBe('Job');
+  await column('Job').getByRole('button', { name: 'Rename Job' }).click();
+  await dialog().getByLabel('Category name').fill('Work');
   await dialog().getByRole('button', { name: 'Save' }).click();
-  await expect.poll(async () => (await entryNamed('Lunch'))?.category).toBe('Transport');
-  await column('Transport').getByLabel('Move Lunch to category').selectOption('Food');
-  await expect.poll(async () => (await entryNamed('Lunch'))?.category).toBe('Food');
+  await expect.poll(async () => (await entryNamed('Salary'))?.category).toBe('Work');
+  await nav(/^Expenses/).click();
 });
 
-test('E2: "+ New category…" in the item form creates the category on save', async () => {
-  await addItem({ newCategory: 'Coffee', label: 'Latte', amount: '6.40' });
-  await expect(column('Coffee')).toContainText('Latte');
-  await expect.poll(async () => await entryNamed('Latte')).toMatchObject({ category: 'Coffee', cents: 640, type: 'Out' });
+test('S1/E2: the Category select lists only the chosen section; the line is saved with its section', async () => {
+  await page.getByRole('button', { name: /Add item/ }).click();
+  const d = dialog();
+  await expect(d.getByLabel('Category', { exact: true })).toBeDisabled(); // until a section is chosen
+  await d.getByLabel('Section', { exact: true }).selectOption({ label: 'Basic Needs' });
+  const needsLines = await d.getByLabel('Category', { exact: true }).locator('option').allTextContents();
+  expect(needsLines).toEqual([
+    'Choose a category…', 'Rent / mortgage', 'Utilities', 'Phone and internet', 'Transport', 'Groceries', 'Insurance',
+    'Loan or debt repayments', 'Family support', 'Childcare or education fees', 'Essential subscriptions',
+  ]);
+  await d.getByLabel('Section', { exact: true }).selectOption({ label: 'Entertainment' });
+  const funLines = await d.getByLabel('Category', { exact: true }).locator('option').allTextContents();
+  expect(funLines).not.toContain('Rent / mortgage');
+  expect(funLines).toContain('Dining out and food delivery');
+  await page.keyboard.press('Escape');
+  await expect(dialog()).toBeHidden();
+
+  await addItem({ section: 'Entertainment', line: 'Dining out and food delivery', label: 'Latte', amount: '6.40' });
+  await expect(column('Dining out and food delivery')).toContainText('Latte');
+  await expect.poll(async () => await entryNamed('Latte')).toMatchObject({
+    category: 'Dining out and food delivery', sectionId: 'fun', lineId: 'dining', cents: 640, type: 'Out',
+  });
 });
 
-test('AI-1: auto-categorise on blur picks an existing category; "✦ Suggest" can propose a new one', async () => {
+test('AI-1: auto-categorise on blur picks a plan line; "✦ Suggest" fills both selects', async () => {
   // The app runs with AI_FAKE=1: canned replies, no provider call.
-  await page.getByRole('button', { name: '+ Add item' }).click();
+  await page.getByRole('button', { name: /Add item/ }).click();
   const d = dialog();
   await d.getByLabel('Item / merchant / source').fill('Grab home');
   await d.getByLabel(/^Amount/).focus(); // blur the item name
   await toast(page, 'Suggested category: Transport');
-  await expect(d.getByLabel('Category', { exact: true })).toHaveValue('Transport');
+  await expect(d.getByLabel('Section', { exact: true })).toHaveValue('needs');
+  await expect(d.getByLabel('Category', { exact: true })).toHaveValue('transport');
 
   await d.getByLabel('Item / merchant / source').fill('Vet visit');
   await d.getByRole('button', { name: '✦ Suggest' }).click();
-  await toast(page, 'Suggested category: Misc');
-  await expect(d.getByLabel('New category name')).toHaveValue('Misc');
+  await toast(page, 'Suggested category: Shopping');
+  await expect(d.getByLabel('Section', { exact: true })).toHaveValue('fun');
+  await expect(d.getByLabel('Category', { exact: true })).toHaveValue('shopping');
 
   await page.keyboard.press('Escape');
   await expect(dialog()).toBeHidden();
@@ -325,7 +381,7 @@ test('G5/S1: currency switch converts every amount; rates are saved; input conve
 
   await page.getByRole('combobox', { name: 'Currency' }).selectOption('USD');
   await expectTotals('US$2,310.00', 'US$16.48', 'US$2,293.52'); // × 0.77
-  await expect(column('Food')).toContainText('US$11.55');
+  await expect(column('Groceries')).toContainText('US$11.55');
   await expect.poll(async () => (await snapshot(ids.a)).user?.currency).toBe('USD');
 
   const rate = page.getByLabel('Rate: USD per S$1');
@@ -335,7 +391,7 @@ test('G5/S1: currency switch converts every amount; rates are saved; input conve
   await expect.poll(async () => (await snapshot(ids.a)).user?.currencyRates.map((r) => [r.code, r.rate])).toEqual([['USD', 0.8]]);
 
   // Typing 4.00 in US$ at 0.8 stores S$5.00 (500 cents).
-  await addItem({ category: 'Food', label: 'Bagel', amount: '4.00' });
+  await addItem({ section: 'Basic Needs', line: 'Groceries', label: 'Bagel', amount: '4.00' });
   await expect.poll(async () => (await entryNamed('Bagel'))?.cents).toBe(500);
 
   await page.reload();
@@ -350,14 +406,14 @@ test('G5/S1: currency switch converts every amount; rates are saved; input conve
 });
 
 test('Data consistency: editing only the note in another currency keeps the stored amount', async () => {
-  await addItem({ category: 'Food', label: 'Gum', amount: '1.01' });
+  await addItem({ section: 'Basic Needs', line: 'Groceries', label: 'Gum', amount: '1.01' });
   await expect.poll(async () => (await entryNamed('Gum'))?.cents).toBe(101);
 
   for (const code of ['GBP', 'EUR', 'USD']) {
     await page.getByRole('combobox', { name: 'Currency' }).selectOption(code);
     await expect(page.getByRole('combobox', { name: 'Currency' })).toHaveValue(code);
     await nav(/^Expenses/).click();
-    await column('Food').getByRole('button', { name: 'Edit Gum' }).click();
+    await column('Groceries').getByRole('button', { name: 'Edit Gum' }).click();
     await dialog().getByLabel('Note (optional)').fill(`note in ${code}`);
     await dialog().getByRole('button', { name: 'Save' }).click();
     await toast(page, 'Item updated');
@@ -370,22 +426,22 @@ test('Data consistency: editing only the note in another currency keeps the stor
 
 test('S3-S5: settings modal saves per user; compact cards hide notes', async () => {
   await nav(/^Expenses/).click();
-  await expect(column('Food')).toContainText('team lunch');
+  await expect(column('Groceries')).toContainText('team lunch');
   await page.getByRole('button', { name: 'Settings' }).click();
   await expect(dialog().getByLabel('Auto-categorise on item name blur')).toBeChecked();
   await expect(dialog().getByLabel('Show sample audit panel')).toBeChecked();
   await dialog().getByLabel('Compact item cards (hide notes on boards)').check();
   await dialog().getByRole('button', { name: 'Save' }).click();
   await toast(page, 'Settings saved');
-  await expect(column('Food')).not.toContainText('team lunch');
+  await expect(column('Groceries')).not.toContainText('team lunch');
   await expect.poll(async () => (await snapshot(ids.a)).user?.compactCards).toBe(true);
 
   await page.reload();
-  await expect(column('Food')).not.toContainText('team lunch');
+  await expect(column('Groceries')).not.toContainText('team lunch');
   await page.getByRole('button', { name: 'Settings' }).click();
   await dialog().getByLabel('Compact item cards (hide notes on boards)').uncheck();
   await dialog().getByRole('button', { name: 'Save' }).click();
-  await expect(column('Food')).toContainText('team lunch');
+  await expect(column('Groceries')).toContainText('team lunch');
   await expect.poll(async () => (await snapshot(ids.a)).user?.compactCards).toBe(false);
 });
 
@@ -395,12 +451,12 @@ test('AI-4: "✦ Suggest with AI" fills and saves next month\'s budget and AI no
   await toast(page, 'AI budget filled in. Edit any number.');
   const note = 'I set every category to 100 to keep next month simple.';
   await expect(page.getByText(note)).toBeVisible();
-  await expect(page.getByLabel(`Food budget for ${NEXT} (S$)`)).toHaveValue('100.00');
+  await expect(page.getByLabel(`Groceries budget for ${NEXT} (S$)`)).toHaveValue('100.00');
 
   const plan = async () => (await snapshot(ids.a)).plans.find((p) => p.monthKey === NEXT);
   await expect.poll(async () => (await plan())?.aiNote).toBe(note);
   const lines = (await plan())!.budgetLines;
-  expect(lines.length).toBeGreaterThan(0);
+  expect(lines).toHaveLength(23); // every plan line, 100 each (display currency = SGD)
   expect(lines.every((l) => l.amountCents === 10000)).toBe(true);
 
   // Leave next month empty for the P1-P9 test.
@@ -409,15 +465,15 @@ test('AI-4: "✦ Suggest with AI" fills and saves next month\'s budget and AI no
   await expect.poll(async () => (await plan())?.aiNote ?? null).toBeNull();
 });
 
-test('P1-P9: next month budget saves per month key, fill and clear work', async () => {
+test('P1-P9: next month budget saves per plan line, fill and clear work; split and carry save', async () => {
   await nav(/^Next month budget/).click();
   await expect(page.getByRole('heading', { name: `Budget for ${NEXT}` })).toBeVisible();
 
-  const food = page.getByLabel(`Food budget for ${NEXT} (S$)`);
-  await food.fill('50');
-  await food.press('Enter');
+  const groceries = page.getByLabel(`Groceries budget for ${NEXT} (S$)`);
+  await groceries.fill('50');
+  await groceries.press('Enter');
   await expect.poll(async () => (await snapshot(ids.a)).plans.find((p) => p.monthKey === NEXT)?.budgetLines.map((l) => [l.lineId, l.amountCents]))
-    .toEqual([['Food', 5000]]);
+    .toEqual([['groceries', 5000]]);
   await expect(page.getByText('Total budget').locator('..')).toContainText('S$50.00');
 
   const expected = page.getByLabel(/Expected income/);
@@ -425,21 +481,32 @@ test('P1-P9: next month budget saves per month key, fill and clear work', async 
   await expected.press('Enter');
   await expect.poll(async () => (await snapshot(ids.a)).plans.find((p) => p.monthKey === NEXT)?.expectedIncomeCents).toBe(350000);
   await expect(page.getByText('Left to save').locator('..')).toContainText('S$3,450.00');
+  // Section total against the 50% split target of S$3,500.00.
+  await expect(page.getByRole('region', { name: `${NEXT} budget: Basic Needs` })).toContainText('S$1,750.00');
 
   await page.getByRole('button', { name: `Fill with ${THIS} amounts` }).click();
   await toast(page, `Filled with ${THIS} amounts`);
   await expect.poll(async () => {
     const lines = (await snapshot(ids.a)).plans.find((p) => p.monthKey === NEXT)?.budgetLines ?? [];
     return Object.fromEntries(lines.map((l) => [l.lineId, l.amountCents]));
-  }).toEqual({ Food: 1500 + 500 + 101, Transport: 0, 'Fixed & Bills': 0, 'Shopping & Insurance': 0, Coffee: 640 }); // every category, like the reference
+  }).toEqual({ groceries: 1500 + 500 + 101, dining: 640 }); // the lines with spend this month
 
   await page.getByRole('button', { name: 'Clear', exact: true }).click();
   await expect.poll(async () => (await snapshot(ids.a)).plans.find((p) => p.monthKey === NEXT)?.budgetLines.length).toBe(0);
 
-  // P9: clearing one input removes that budget. Set Food = 50 again for the next test.
-  await food.fill('50');
-  await food.press('Enter');
+  // P9: setting one line again leaves exactly one budget. Groceries = 50 for the next test.
+  await groceries.fill('50');
+  await groceries.press('Enter');
   await expect.poll(async () => (await snapshot(ids.a)).plans.find((p) => p.monthKey === NEXT)?.budgetLines.length).toBe(1);
+
+  // Split targets and carry-over are saved per user (Reset puts them back).
+  const needs = page.getByRole('spinbutton', { name: 'Basic Needs', exact: true });
+  await needs.fill('40');
+  await needs.press('Enter');
+  await expect.poll(async () => (await snapshot(ids.a)).user?.splitNeeds).toBe(40);
+  await expect(page.getByText('Adds up to 90%')).toBeVisible();
+  await page.getByRole('button', { name: 'Last month only' }).click();
+  await expect.poll(async () => (await snapshot(ids.a)).user?.carryMode).toBe('last');
 });
 
 test('G4/P8: "+ Month" copies recurring items, rejects duplicates, and earlier budgets attach', async () => {
@@ -455,7 +522,11 @@ test('G4/P8: "+ Month" copies recurring items, rejects duplicates, and earlier b
 
   await nav(/^Dashboard/).click();
   await expectTotals('S$3,000.00', 'S$0.00', 'S$3,000.00');
-  await expect(page.getByText('S$50.00 left of S$50.00 budget').first()).toBeVisible();
+  await expect(page.getByText('S$50.00 left of S$50.00 budget').first()).toBeVisible(); // Dashboard
+  await nav(/^Expenses/).click();
+  await expect(column('Groceries')).toContainText('S$50.00 left of S$50.00 budget'); // board, per line
+  await expect(page.getByRole('region', { name: 'Basic Needs', exact: true })).toContainText('S$50.00 left of S$50.00 budget'); // per section
+  await nav(/^Dashboard/).click();
 
   await page.getByRole('button', { name: '+ Month' }).click();
   await dialog().getByLabel('Month label').fill(THIS);
@@ -490,11 +561,11 @@ test('Error handling: a failed request rolls back the optimistic move and shows 
   await page.route('**/*', (route) =>
     route.request().method() === 'POST' && route.request().headers()['next-action'] ? route.abort('failed') : route.continue(),
   );
-  await column('Food').getByLabel('Move Lunch to category').selectOption('Transport');
+  await column('Groceries').getByLabel('Move Lunch to category').selectOption('Transport');
   await toast(page, 'Something went wrong, try again');
   await page.unroute('**/*');
-  await expect(column('Food')).toContainText('Lunch');
-  expect((await entryNamed('Lunch'))?.category).toBe('Food');
+  await expect(column('Groceries')).toContainText('Lunch');
+  expect((await entryNamed('Lunch'))?.lineId).toBe('groceries');
 });
 
 test('X2/X1: reset to sample data, PRD sample totals, CSV export', async () => {
@@ -509,9 +580,14 @@ test('X2/X1: reset to sample data, PRD sample totals, CSV export', async () => {
   const sum = (cat: string) => jan.filter((e) => e.category === cat).reduce((s, e) => s + e.cents, 0);
   expect(sum('Food')).toBe(15196);
   expect(sum('Interest')).toBe(5494);
+  // S7: every sample expense sits in a section and line, and Reset cleared the plans, split and carry.
+  expect(jan.filter((e) => e.type === 'Out').every((e) => e.sectionId && e.lineId)).toBe(true);
+  expect((await snapshot(ids.a)).plans).toHaveLength(0);
+  expect((await snapshot(ids.a)).user).toMatchObject({ splitNeeds: 50, splitInvest: 20, splitFun: 30, carryMode: 'cum' });
 
   await nav(/^Expenses/).click();
-  await expect(column('Food')).toContainText('S$151.96');
+  // Groceries: 25 "Food" rows (151.96) + SHENGSHIONG 13.14 and 15.79 + YUENYUENG 13.86.
+  await expect(column('Groceries')).toContainText('S$194.75');
   await nav(/^Income/).click();
   await expect(column('Interest')).toContainText('S$54.94');
 
@@ -526,7 +602,7 @@ test('X2/X1: reset to sample data, PRD sample totals, CSV export', async () => {
   const csv = fs.readFileSync((await download.path())!, 'utf8').replace(/^﻿/, '');
   const lines = csv.trim().split(/\r?\n/);
   expect(lines[0]).toBe('"Month","Type","Category","Item","Amount (SGD)","Amount (SGD)","Note"');
-  expect(lines.length).toBeGreaterThanOrEqual(1 + 73);
+  expect(lines).toHaveLength(1 + 73); // no budget rows after Reset
 });
 
 // Runs on the sample month (Jan-25) so later tests keep this month's totals.
@@ -557,7 +633,8 @@ test('AI-6: paste to add previews rows, saves nothing until confirmed, then adds
 
   await expect.poll(async () => (await entriesOf(ids.a, 'Jan-25')).length).toBe(before.length + 2);
   const after = await entriesOf(ids.a, 'Jan-25');
-  expect(after.find((e) => e.label === 'Vet visit')).toMatchObject({ category: 'Pets', cents: 4500, type: 'Out' });
+  expect(after.find((e) => e.label === 'Vet visit')).toMatchObject({ category: 'Unassigned', sectionId: null, lineId: null, cents: 4500, type: 'Out' });
+  expect(after.find((e) => e.label === 'Grab' && e.note === '03 Feb')).toMatchObject({ category: 'Transport', sectionId: 'needs', lineId: 'transport' });
   expect(after.filter((e) => e.label === 'Grab' && e.note === '03 Feb')).toHaveLength(1 + before.filter((e) => e.label === 'Grab' && e.note === '03 Feb').length);
 });
 
@@ -571,6 +648,15 @@ test('A1: data persists after signing out and back in', async () => {
   await page.waitForURL(/\/m\//);
   await page.goto(`/m/${THIS}`);
   await expectTotals('S$3,000.00', 'S$27.41', 'S$2,972.59');
+});
+
+test('A2 setup: user A sets a budget that user B must not see', async () => {
+  await page.goto(`/m/${THIS}/budget`);
+  const groceries = page.getByLabel(`Groceries budget for ${NEXT} (S$)`);
+  await groceries.fill('77');
+  await groceries.press('Enter');
+  await expect.poll(async () => (await snapshot(ids.a)).plans.find((p) => p.monthKey === NEXT)?.budgetLines.map((l) => [l.lineId, l.amountCents]))
+    .toEqual([['groceries', 7700]]);
 });
 
 // ---------------------------------------------------------------------------- user B
@@ -594,26 +680,50 @@ test('A2: user B sees none of user A\'s data', async () => {
 });
 
 test('A2: a tampered request from user B cannot delete or move user A\'s entry', async () => {
-  await addItem({ category: 'Food', label: 'Mine', amount: '1' });
+  await addItem({ section: 'Basic Needs', line: 'Groceries', label: 'Mine', amount: '1' });
   await expect.poll(async () => (await entryNamed('Mine', ids.b))?.id).toBeTruthy();
   const mineId = (await entryNamed('Mine', ids.b))!.id;
   await nav(/^Expenses/).click();
-  await expect(column('Food').getByRole('button', { name: 'Delete Mine' })).toBeEnabled();
+  await expect(column('Groceries').getByRole('button', { name: 'Delete Mine' })).toBeEnabled();
 
   let untamper = await tamperNextAction(mineId, lunchIdOfA);
-  await column('Food').getByRole('button', { name: 'Delete Mine' }).click();
+  await column('Groceries').getByRole('button', { name: 'Delete Mine' }).click();
   await confirmWith('Delete');
   await toast(page, 'Something went wrong, try again');
   await untamper();
 
   untamper = await tamperNextAction(mineId, lunchIdOfA);
-  await column('Food').getByLabel('Move Mine to category').selectOption('Transport');
+  await column('Groceries').getByLabel('Move Mine to category').selectOption('Transport');
   await toast(page, 'Something went wrong, try again');
   await untamper();
 
   const lunch = (await snapshot(ids.a)).entries.find((e) => e.id === lunchIdOfA);
-  expect(lunch).toMatchObject({ label: 'Lunch', category: 'Food', cents: 1500 });
-  expect((await entryNamed('Mine', ids.b))?.category).toBe('Food');
+  expect(lunch).toMatchObject({ label: 'Lunch', category: 'Groceries', lineId: 'groceries', cents: 1500 });
+  expect((await entryNamed('Mine', ids.b))?.lineId).toBe('groceries');
+});
+
+test('A2: user B sees and changes only their own plan, never user A\'s', async () => {
+  await page.goto(`/m/${THIS}/budget`);
+  await expect(page.getByRole('heading', { name: `Budget for ${NEXT}` })).toBeVisible();
+  // A's S$77.00 budget for the same month key is not shown to B.
+  await expect(page.getByLabel(`Groceries budget for ${NEXT} (S$)`)).toHaveValue('');
+  await expect(page.getByText('S$77.00')).toHaveCount(0);
+
+  const groceries = page.getByLabel(`Groceries budget for ${NEXT} (S$)`);
+  await groceries.fill('11');
+  await groceries.press('Enter');
+  await expect.poll(async () => (await snapshot(ids.b)).plans.find((p) => p.monthKey === NEXT)?.budgetLines.map((l) => [l.lineId, l.amountCents]))
+    .toEqual([['groceries', 1100]]);
+  // A's plan is untouched.
+  expect((await snapshot(ids.a)).plans.find((p) => p.monthKey === NEXT)?.budgetLines.map((l) => [l.lineId, l.amountCents])).toEqual([['groceries', 7700]]);
+
+  // B's Reset (sample data) must not clear A's plan either.
+  await page.getByRole('button', { name: 'Reset to sample data' }).click();
+  await confirmWith('Reset');
+  await toast(page, 'Restored Jan-25 data');
+  expect((await snapshot(ids.a)).plans.find((p) => p.monthKey === NEXT)?.budgetLines).toHaveLength(1);
+  expect((await snapshot(ids.b)).plans).toHaveLength(0);
+  await page.goto(`/m/${THIS}`);
 });
 
 // ---------------------------------------------------------------------------- phone
@@ -621,10 +731,10 @@ test('A2: a tampered request from user B cannot delete or move user A\'s entry',
 test('G6/G7: phone layout, FAB adds an item', async () => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
-  const fab = page.getByRole('button', { name: 'Add item' });
+  const fab = page.getByRole('button', { name: 'Add item', exact: true });
   await expect(fab).toBeVisible();
   await fab.click();
-  await fillEntry({ category: 'Transport', label: 'Bus', amount: '2.10' });
+  await fillEntry({ section: 'Basic Needs', line: 'Transport', label: 'Bus', amount: '2.10' });
   await expect.poll(async () => (await entryNamed('Bus', ids.b))?.cents).toBe(210);
 
   // Layout toggle saves per user.

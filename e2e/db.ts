@@ -24,7 +24,10 @@ export async function snapshot(userId: string) {
   ]);
   const entries = months.flatMap((m) =>
     m.categories.flatMap((c) =>
-      c.entries.map((e) => ({ month: m.key, type: c.type, category: c.name, label: e.label, cents: e.amountCents, note: e.note, id: e.id })),
+      c.entries.map((e) => ({
+        month: m.key, type: c.type, category: c.name, label: e.label, cents: e.amountCents, note: e.note, id: e.id,
+        sectionId: e.sectionId, lineId: e.lineId,
+      })),
     ),
   );
   return { user, months, plans, entries };

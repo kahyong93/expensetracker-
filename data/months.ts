@@ -280,6 +280,26 @@ export async function startFresh(): Promise<ActionResult<{ key: string }>> {
 }
 
 /**
+ * PRD S7: Reset to sample data clears every plan of the user (budgets cascade, with expected
+ * income and the AI note) and puts split and carry back to their defaults. The users row must
+ * already exist.
+ */
+function resetPlan(userId: string): [BatchItem<'pg'>, BatchItem<'pg'>] {
+  return [
+    db.delete(monthPlans).where(eq(monthPlans.userId, userId)),
+    db
+      .update(users)
+      .set({
+        splitNeeds: DEFAULT_PLAN_PREFS.split.needs,
+        splitInvest: DEFAULT_PLAN_PREFS.split.invest,
+        splitFun: DEFAULT_PLAN_PREFS.split.fun,
+        carryMode: DEFAULT_PLAN_PREFS.carryMode,
+      })
+      .where(eq(users.id, userId)),
+  ];
+}
+
+/**
  * Load the Jan-25 sample (PRD A3), or restore it to its original state (PRD X2).
  * Other months are untouched; plans, split and carry are reset (PRD S7).
  */
@@ -297,18 +317,7 @@ export async function loadSampleMonth(): Promise<ActionResult<{ key: string }>> 
       // Deleting the categories cascades to their entries.
       db.delete(categories).where(and(eq(categories.monthId, existing.id), owned)),
       db.delete(aiInsights).where(and(eq(aiInsights.monthId, existing.id), inArray(aiInsights.monthId, ownedMonthIds(userId)))),
-      // PRD S7: Reset also clears every plan (budgets cascade, with expected income and the AI
-      // note) and puts split and carry back to their defaults.
-      db.delete(monthPlans).where(eq(monthPlans.userId, userId)),
-      db
-        .update(users)
-        .set({
-          splitNeeds: DEFAULT_PLAN_PREFS.split.needs,
-          splitInvest: DEFAULT_PLAN_PREFS.split.invest,
-          splitFun: DEFAULT_PLAN_PREFS.split.fun,
-          carryMode: DEFAULT_PLAN_PREFS.carryMode,
-        })
-        .where(eq(users.id, userId)),
+      ...resetPlan(userId),
       ...contentInserts(existing.id, contents),
     ];
     await db.batch(batch);
@@ -316,7 +325,8 @@ export async function loadSampleMonth(): Promise<ActionResult<{ key: string }>> 
   }
 
   const row = monthRow(userId, SAMPLE_MONTH_KEY, true);
-  const batch: Batch = [ensureUserRow(userId), db.insert(months).values(row), ...contentInserts(row.id, contents)];
+  // The footer's Reset lands here too when the user has no sample month yet: it clears the plan all the same.
+  const batch: Batch = [ensureUserRow(userId), db.insert(months).values(row), ...resetPlan(userId), ...contentInserts(row.id, contents)];
   await db.batch(batch);
   return ok({ key: SAMPLE_MONTH_KEY });
 }

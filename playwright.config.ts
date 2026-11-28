@@ -28,6 +28,13 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 900 } },
       dependencies: ['setup'],
     },
+    {
+      // The budget plan journey again at phone width (390px), with its own user.
+      name: 'phone',
+      testMatch: /plan\.spec\.ts/,
+      use: { ...devices['Pixel 5'], viewport: { width: 390, height: 844 } },
+      dependencies: ['setup'],
+    },
   ],
   webServer: {
     // A production build: stable and fast, and it doesn't clash with a running `next dev`.
